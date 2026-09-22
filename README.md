@@ -1,1 +1,1 @@
-# sateelight-collision-avoidance-system
+# satellite-collision-avoidance-system
