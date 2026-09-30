@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>STAGE 2 & HANDOFF 2 REPORT — SATELLITE COLLISION AVOIDANCE SYSTEM</title>
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #111827; background: #ffffff; line-height: 1.45; font-size: 10pt;
+      margin: 0 auto; max-width: 800px; padding: 25px;
+    }
+    h1 { font-size: 18pt; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
+    .subtitle { font-size: 11pt; color: #374151; margin-bottom: 12px; }
+    .meta { font-size: 9pt; color: #4b5563; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
+    h2 { font-size: 11.5pt; font-weight: 700; margin-top: 16px; margin-bottom: 6px; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; }
+    p, li { font-size: 9.5pt; color: #1f2937; }
+    ul { margin: 4px 0 8px 0; padding-left: 20px; }
+    li { margin-bottom: 3px; }
+    pre {
+      font-family: Consolas, "Courier New", monospace; font-size: 8.5pt;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 12px; margin: 6px 0; line-height: 1.35;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 12px 0; font-size: 8.5pt; }
+    th, td { border: 1px solid #d1d5db; padding: 5px 8px; text-align: left; }
+    th { background: #f3f4f6; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>STAGE 2 & HANDOFF 2 REPORT</h1>
+  <div class="subtitle">Satellite Collision Avoidance System — D1</div>
+  <div class="meta">
+    Stage 2: Visualization Using Person 1's Output | Handoff 2: SGP4 Trajectory Verification & Zero Hardcoding
+  </div>
+
+  <h2>1. Stage 2 Overview & Objectives</h2>
+  <ul>
+    <li><strong>1. Single Input Source</strong>: Takes Person 1's generated position/velocity data (<code>output/orbital_states.csv</code>) as the only input.</li>
+    <li><strong>2. 2D Trajectory Plot</strong>: Creates a 2D trajectory plot displaying Earth ($R=6371\text{ km}$), CARTOSAT-3, and PSLV R/B.</li>
+    <li><strong>3. Synchronous Time Range</strong>: Plots both orbital trajectories across the identical 60-minute time window.</li>
+    <li><strong>4. Labels & Identification</strong>: Clear axes labels, legend, start/end markers, and telemetry annotations identifying each object.</li>
+    <li><strong>5. Modular Architecture</strong>: Cleanly separated functions ready to ingest relative-motion and risk assessment metrics.</li>
+  </ul>
+
+  <h2>2. Input Data Verification (Zero Hardcoding)</h2>
+  <table>
+    <tr><th>Parameter</th><th>Value</th><th>Status</th></tr>
+    <tr><td>Input File</td><td><code>output/orbital_states.csv</code></td><td>Verified Single Source</td></tr>
+    <tr><td>Objects Identified</td><td>CARTOSAT-3 (Satellite), PSLV R/B (Debris/RB)</td><td>2 Objects Verified</td></tr>
+    <tr><td>Time Range</td><td>2026-09-29 03:44:40 to 04:44:40 UTC</td><td>61 Matching Points</td></tr>
+    <tr><td>CARTOSAT-3 60-min Displacement</td><td>12,587.56 km</td><td>Dynamic Motion Confirmed</td></tr>
+    <tr><td>PSLV R/B 60-min Displacement</td><td>12,058.47 km</td><td>Dynamic Motion Confirmed</td></tr>
+    <tr><td>Closest Approach (CAD)</td><td>10,462.28 km @ 03:50:40 UTC</td><td>Extensible Overlay</td></tr>
+  </table>
+
+  <h2>3. Handoff 2 Confirmation Checklist</h2>
+  <table>
+    <tr><th>Check</th><th>Expectation</th><th>Result</th></tr>
+    <tr><td>Single Input</td><td>Only reads <code>output/orbital_states.csv</code></td><td>✓ Confirmed</td></tr>
+    <tr><td>No Hard-Coding</td><td>Zero hardcoded positions or velocities in plot</td><td>✓ Confirmed</td></tr>
+    <tr><td>Earth Geometry</td><td>Earth circular patch with physical radius 6371 km</td><td>✓ Confirmed</td></tr>
+    <tr><td>Time Synchronization</td><td>Equal number of timesteps for all objects</td><td>✓ Confirmed (61 pts)</td></tr>
+    <tr><td>Object Distinction</td><td>Satellite and Debris labeled with distinct styles</td><td>✓ Confirmed</td></tr>
+    <tr><td>Dynamic Real SGP4</td><td>Objects move strictly according to propagated data</td><td>✓ Confirmed</td></tr>
+  </table>
+
+  <h2>4. Commands</h2>
+  <pre>
+python stage2_visualization.py           # Show static 2D trajectory plot
+python stage2_visualization.py --animate # Show animated orbital motion
+python stage2_visualization.py --test    # Run non-interactive verification
+  </pre>
+</body>
+</html>
