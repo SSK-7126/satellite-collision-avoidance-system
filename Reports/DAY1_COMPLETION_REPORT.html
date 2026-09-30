@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DAY 1 COMPLETION REPORT — SATELLITE COLLISION AVOIDANCE SYSTEM</title>
+  <style>
+    @page { size: A4; margin: 20mm 18mm 20mm 18mm; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #111827;
+      background: #ffffff;
+      line-height: 1.5;
+      font-size: 10pt;
+      padding: 28px 30px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .doc-header {
+      border-bottom: 2.5px solid #111827;
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+
+    .doc-header h1 {
+      font-size: 17pt;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .doc-header .subtitle {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .doc-meta {
+      margin-top: 8px;
+      font-size: 8.5pt;
+      color: #6b7280;
+      display: flex;
+      gap: 24px;
+    }
+
+    /* Section Headings */
+    h2 {
+      font-size: 11pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 3px;
+      margin: 18px 0 8px 0;
+    }
+
+    h3 {
+      font-size: 10pt;
+      font-weight: 700;
+      margin: 12px 0 5px 0;
+      color: #1e3a5f;
+    }
+
+    p {
+      font-size: 9.5pt;
+      margin-bottom: 6px;
+      color: #1f2937;
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-box {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 9pt;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid #0284c7;
+      padding: 12px 16px;
+      margin: 10px 0;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    /* Verification Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px 0;
+      font-size: 9pt;
+    }
+
+    th {
+      background: #1e3a5f;
+      color: #ffffff;
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    td {
+      border: 1px solid #e5e7eb;
+      padding: 5px 10px;
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td { background: #f9fafb; }
+
+    .pass { color: #059669; font-weight: 700; }
+    .fail { color: #dc2626; font-weight: 700; }
+
+    /* Code blocks */
+    pre {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin: 6px 0 12px 0;
+      line-height: 1.35;
+      overflow-x: auto;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    ul {
+      margin: 4px 0 8px 18px;
+    }
+
+    li {
+      font-size: 9.5pt;
+      color: #1f2937;
+      margin-bottom: 3px;
+    }
+
+    /* Section divider */
+    .divider {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 16px 0;
+    }
+
+    /* Stage Cards */
+    .stage-card {
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 8px 0;
+    }
+
+    .stage-card.person1 { border-left: 4px solid #0284c7; }
+    .stage-card.person2 { border-left: 4px solid #e11d48; }
+    .stage-card.joint   { border-left: 4px solid #d97706; }
+
+    .stage-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .file-list {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8pt;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      padding: 8px 12px;
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Title Block -->
+  <div class="doc-header">
+    <h1>Day 1 Completion Report</h1>
+    <div class="subtitle">Satellite Collision Avoidance System (SCAS) — ICPS Project</div>
+    <div class="doc-meta">
+      <span>Date: 2026-09-30</span>
+      <span>Status: Day 1 Complete</span>
+      <span>Team: Person 1 (Backend) + Person 2 (Visualization)</span>
+    </div>
+  </div>
+
+  <!-- 1. Executive Summary -->
+  <h2>1. Day 1 Goal & Completion Statement</h2>
+  <p>
+    Day 1 objective: Establish the full data pipeline from real tracked orbital data through SGP4 numerical propagation to a confirmed, labeled 2D trajectory visualization — with joint verification confirming that no data is manually hard-coded into any stage of the pipeline.
+  </p>
+
+  <div class="pipeline-box">Real TLE Data  -->  SGP4 Propagation (Person 1)  -->  orbital_states.csv
+                                                             |
+                                                             v
+                                       2D Trajectory Visualization (Person 2)
+                                                             |
+                                                             v
+                                       Handoff 2: Verification (Both)</div>
+
+  <p><strong>Status: COMPLETE.</strong> All 10 verification checks pass. The pipeline runs end-to-end from raw TLE records to a confirmed trajectory plot with zero hard-coded values.</p>
+
+  <hr class="divider">
+
+  <!-- 2. Stage Breakdown -->
+  <h2>2. Stage Breakdown</h2>
+
+  <div class="stage-card person1">
+    <div class="stage-title">Stage 1 — Person 1: SGP4 Orbital Propagation</div>
+    <ul>
+      <li>Loaded real TLE records for <strong>CARTOSAT-3</strong> (NORAD 44804) and <strong>PSLV R/B</strong> (NORAD 44805) from <code>data/orbital_data.txt</code>.</li>
+      <li>Constructed SGP4 analytical propagation models via <code>sgp4.api.Satrec.twoline2rv()</code>.</li>
+      <li>Propagated orbital state vectors at 1-minute intervals over a 60-minute window (61 time points).</li>
+      <li>Exported position $(X, Y, Z)$ and velocity $(V_x, V_y, V_z)$ data to <code>output/orbital_states.csv</code>.</li>
+      <li>Computed pairwise relative motion and closest approach metrics in <code>output/encounter_analysis.csv</code>.</li>
+    </ul>
+    <p><strong>Epoch:</strong> 2026-09-29 03:44:40 UTC | <strong>122 state vectors</strong> (61 steps × 2 objects)</p>
+  </div>
+
+  <div class="stage-card person2">
+    <div class="stage-title">Stage 2 — Person 2: 2D Trajectory Visualization</div>
+    <ul>
+      <li><strong>Single Input:</strong> Reads exclusively from <code>output/orbital_states.csv</code>. No orbital coordinates are hard-coded in visualization logic.</li>
+      <li><strong>Earth Rendering:</strong> Circular patch centered at geocenter $(0, 0)\text{ km}$ with radius $R_E = 6371.0\text{ km}$ and equatorial crosshair.</li>
+      <li><strong>CARTOSAT-3 Trajectory:</strong> Cyan curve over 61 time steps with annotated start marker (Alt: 525.3 km, Vel: 7.60 km/s), end marker, and object label.</li>
+      <li><strong>PSLV R/B Trajectory:</strong> Coral curve over 61 matching time steps with annotated start marker (Alt: 372.6 km, Vel: 7.69 km/s), end marker, and object label.</li>
+      <li><strong>Closest Approach Overlay:</strong> Amber dotted line showing CAD = 10,462.28 km at TCA 03:50:40 UTC (sourced from <code>encounter_analysis.csv</code>).</li>
+      <li><strong>Labels & Legend:</strong> Axes in km, complete legend distinguishing all rendered elements, coordinate grid, and data-source watermark.</li>
+      <li><strong>Modular Design:</strong> Separate loader functions for orbital states and relative-motion/risk data; plug-in hooks ready for Day 2 risk data ingestion.</li>
+    </ul>
+  </div>
+
+  <div class="stage-card joint">
+    <div class="stage-title">Handoff 2 — Both: SGP4 Motion & Zero Hardcoding Verification</div>
+    <ul>
+      <li>Automated verification of data provenance, time synchrony, physical altitude ranges, and dynamic displacement.</li>
+      <li>CARTOSAT-3: 60-min orbital displacement = <strong>12,587.56 km</strong> — confirms active SGP4 propagation, not static values.</li>
+      <li>PSLV R/B: 60-min orbital displacement = <strong>12,058.47 km</strong> — confirms active SGP4 propagation, not static values.</li>
+      <li>Time series synchronized: exact 61 matching timestamps for both objects.</li>
+    </ul>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 3. Verification Results -->
+  <h2>3. Verification Results</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Check</th>
+        <th>Expectation</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Real TLE data loaded</td><td>2 objects from <code>orbital_data.txt</code></td><td class="pass">PASS</td></tr>
+      <tr><td>2</td><td>SGP4 propagation executed</td><td>Error code = 0 for all time steps</td><td class="pass">PASS</td></tr>
+      <tr><td>3</td><td>Position/velocity time series</td><td>61 steps × 2 objects = 122 state vectors</td><td class="pass">PASS</td></tr>
+      <tr><td>4</td><td>2D plot input = CSV only</td><td>Zero hardcoded orbital coordinates</td><td class="pass">PASS</td></tr>
+      <tr><td>5</td><td>Earth rendered geometrically</td><td>$R_E = 6371\text{ km}$ constant, no hardcoded shape</td><td class="pass">PASS</td></tr>
+      <tr><td>6</td><td>Both objects plotted</td><td>CARTOSAT-3 + PSLV R/B visible on plot</td><td class="pass">PASS</td></tr>
+      <tr><td>7</td><td>Same time range</td><td>Exact 61-point sync between both objects</td><td class="pass">PASS</td></tr>
+      <tr><td>8</td><td>Labels and legend</td><td>Object type labels, markers, callouts, axes</td><td class="pass">PASS</td></tr>
+      <tr><td>9</td><td>Modular architecture</td><td>Encounter data plug-in hook implemented</td><td class="pass">PASS</td></tr>
+      <tr><td>10</td><td>Objects move per SGP4 data</td><td>&gt;12,000 km net displacement over 60 min</td><td class="pass">PASS</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- 4. Numerical Summary -->
+  <h2>4. Numerical Output Summary</h2>
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>CARTOSAT-3</th><th>PSLV R/B</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>NORAD Catalog ID</td><td>44804</td><td>44805</td></tr>
+      <tr><td>Object Type</td><td>Earth Observation Satellite</td><td>Rocket Body (Debris)</td></tr>
+      <tr><td>Epoch Position (km)</td><td>(6105, −3207, −4)</td><td>(−1295, 167, 6616)</td></tr>
+      <tr><td>Altitude at Epoch</td><td>525.3 km</td><td>372.6 km</td></tr>
+      <tr><td>Orbital Speed at Epoch</td><td>7.601 km/s</td><td>7.691 km/s</td></tr>
+      <tr><td>Altitude Range (60 min)</td><td>501.6 – 525.3 km</td><td>372.6 – 409.2 km</td></tr>
+      <tr><td>60-min Net Displacement</td><td>12,587.56 km</td><td>12,058.47 km</td></tr>
+      <tr><td>Propagation Steps</td><td>61 points (0–60 min)</td><td>61 points (0–60 min)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Closest Approach (from encounter_analysis.csv)</h3>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Closest Approach Distance (CAD)</td><td>10,462.28 km</td></tr>
+      <tr><td>Time of Closest Approach (TCA)</td><td>2026-09-29 03:50:40 UTC (T + 6 min)</td></tr>
+      <tr><td>Relative Speed at TCA</td><td>11.935 km/s</td></tr>
+      <tr><td>Proximity Status</td><td>SAFE [LOW] (&gt;100 km separation)</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- 5. Files Generated -->
+  <h2>5. Files Generated</h2>
+  <div class="file-list">
+data/orbital_data.txt                — Input: Real TLE records (CARTOSAT-3 + PSLV R/B)
+
+output/orbital_states.csv           — Person 1: 122 SGP4 state vectors (61 steps x 2 objects)
+output/encounter_analysis.csv       — Person 1: 61-row relative motion analysis
+output/stage2_trajectory_plot.png   — Person 2: 2D trajectory plot
+
+stage2_visualization.py             — Person 2: Modular visualization module
+day1_pipeline.py                    — Both: End-to-end pipeline runner
+  </div>
+
+  <hr class="divider">
+
+  <!-- 6. Execution Commands -->
+  <h2>6. Execution Commands</h2>
+
+  <h3>Run the full Day 1 pipeline (Stage 1 + Stage 2 + Handoff 2):</h3>
+  <pre>python day1_pipeline.py</pre>
+
+  <h3>Stage 1 only — regenerate orbital states:</h3>
+  <pre>python propagator.py</pre>
+
+  <h3>Stage 2 only — static 2D trajectory plot (uses existing CSV):</h3>
+  <pre>python stage2_visualization.py</pre>
+
+  <h3>Stage 2 — animated frame-by-frame playback:</h3>
+  <pre>python stage2_visualization.py --animate</pre>
+
+  <h3>Handoff 2 verification only:</h3>
+  <pre>python stage2_visualization.py --test</pre>
+
+  <hr class="divider">
+
+  <!-- 7. Day 1 Completion Statement -->
+  <h2>7. Day 1 Completion Statement</h2>
+  <p>
+    Day 1 deliverable is complete. The full pipeline — from real Two-Line Element (TLE) orbital records through SGP4 analytical propagation to a verified 2D trajectory visualization — has been implemented, executed, and jointly confirmed by both team members. All 10 automated verification checks pass. No orbital positions, velocities, or physical dimensions are hard-coded in any module; all data flows exclusively from the SGP4 engine through <code>output/orbital_states.csv</code> into the visualization layer.
+  </p>
+  <p>
+    The architecture is modular and ready for Day 2 extension with relative-motion metrics, probability-of-collision calculations, and advanced proximity risk overlays.
+  </p>
+
+</body>
+</html>
