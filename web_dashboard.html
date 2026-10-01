@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -207,8 +208,13 @@
     }
 
     @keyframes pulse {
-      from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
-      to { box-shadow: 0 0 25px rgba(239, 68, 68, 0.7); }
+      from {
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+      }
+
+      to {
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+      }
     }
 
     .alarm-box {
@@ -283,6 +289,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- WebGL 3D Canvas -->
@@ -294,7 +301,7 @@
     <header class="interactive">
       <div class="title-group">
         <h1><span>✦</span> SATELLITE COLLISION AVOIDANCE SYSTEM</h1>
-        <div class="subtitle">3D Real-Time Conjunction Assessment & Proximity Visualization Center — D1</div>
+        <div class="subtitle">3D Conjunction Assessment & Proximity Visualization — D1</div>
       </div>
       <div class="mode-indicator">
         <span id="mode-text">REAL TRACKED DATA</span>
@@ -305,7 +312,7 @@
     <!-- Main Content (Right HUD) -->
     <div class="main-content">
       <div class="hud-panel interactive">
-        
+
         <!-- Simulation Clock -->
         <div>
           <div class="section-title">
@@ -369,7 +376,8 @@
           </div>
           <div class="telemetry-row">
             <span class="telemetry-label">3D Separation:</span>
-            <span class="telemetry-val" id="enc-dist" style="color: var(--accent-cyan); font-size: 0.95rem;">10,480.22 km</span>
+            <span class="telemetry-val" id="enc-dist" style="color: var(--accent-cyan); font-size: 0.95rem;">10,480.22
+              km</span>
           </div>
           <div class="telemetry-row">
             <span class="telemetry-label">Relative Speed:</span>
@@ -446,474 +454,2219 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
-    // System Constants
-    const R_EARTH = 6371; // km
-    const SCALE = 1 / 1000; // 1 ThreeJS unit = 1000 km
+    // ============================================================
+    // SATELLITE COLLISION AVOIDANCE SYSTEM — D1 DASHBOARD
+    // ============================================================
+
+    const R_EARTH = 6371;              // km
+    const SCALE = 1 / 1000;            // 1 Three.js unit = 1000 km
     const EARTH_RADIUS_SCALED = R_EARTH * SCALE;
 
-    let scene, camera, renderer, controls;
-    let earthMesh, atmosphereMesh;
-    let satMesh, secMesh;
-    let satTrailGeom, secTrailGeom;
-    let satTrailLine, secTrailLine;
-    let conjunctionLine;
-    let satOrbitLine, secOrbitLine;
+    // Prototype thresholds from analysis_engine.py
+    const SAFE_DISTANCE_KM = 100.0;
+    const CLOSE_APPROACH_KM = 10.0;
 
-    // State Variables
-    let mode = "real"; // "real" | "synthetic"
+    // ------------------------------------------------------------
+    // Three.js objects
+    // ------------------------------------------------------------
+
+    let scene, camera, renderer, controls;
+
+    let earthMesh;
+    let atmosphereMesh;
+
+    let satMesh;
+    let secMesh;
+
+    let satTrailGeom;
+    let secTrailGeom;
+
+    let satTrailLine;
+    let secTrailLine;
+
+    let conjunctionLine;
+
+    let satOrbitLine;
+    let secOrbitLine;
+
+
+    // ------------------------------------------------------------
+    // Dashboard state
+    // ------------------------------------------------------------
+
+    let mode = "real";
     let isPaused = false;
     let speed = 60;
-    let realTimeSec = 0; // seconds from epoch
+
+    let realStates = [];
+    let realFrameIndex = 0;
+    let realFrameAccumulator = 0;
+    let realDataReady = false;
+
+    let realCAD = null;
+    let realTCA = null;
+
     let syntheticTimeSec = 0;
 
     let cad_km = Infinity;
     let tca_str = "Calculating...";
+
     let closeApproachDetected = false;
     let persistedRecord = null;
 
     const satTrailPositions = [];
     const secTrailPositions = [];
+
     const MAX_TRAIL = 200;
 
-    // TLE Real Data Parameters (CARTOSAT-3 & PSLV R/B)
-    const epochDate = new Date("2026-09-29T03:44:40Z");
-    
-    // Orbital parameters approximate for visual propagation
-    const cartosatA = 6895; // semi-major axis km
-    const cartosatInc = 97.4 * Math.PI / 180;
-    const cartosatRAAN = 332.3 * Math.PI / 180;
-    const cartosatPeriodSec = 5685;
+    const ORBITAL_DATA_PATH = "output/orbital_states.csv";
+    const ANALYSIS_DATA_PATH = "output/encounter_analysis.csv";
 
-    const pslvA = 6744; // semi-major axis km
-    const pslvInc = 97.16 * Math.PI / 180;
-    const pslvRAAN = 312.9 * Math.PI / 180;
-    const pslvPeriodSec = 5533;
 
-    function initThree() {
-      const canvas = document.getElementById("webgl-canvas");
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x060812);
+    // ============================================================
+    // CSV LOADING
+    // ============================================================
 
-      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(12, 10, 18);
+    function parseCSV(text) {
 
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const lines = text
+        .trim()
+        .split(/\r?\n/)
+        .filter(line => line.trim().length > 0);
 
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controls.minDistance = 7;
-      controls.maxDistance = 50;
+      if (lines.length < 2) {
+        return [];
+      }
 
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0x223344, 1.2);
-      scene.add(ambientLight);
+      const headers = lines[0]
+        .split(",")
+        .map(h => h.trim());
 
-      const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-      sunLight.position.set(30, 20, 20);
-      scene.add(sunLight);
+      return lines.slice(1).map(line => {
 
-      // Starfield
-      createStarfield();
+        const values = line.split(",");
+        const row = {};
 
-      // Earth Sphere
-      createEarth();
+        headers.forEach((header, index) => {
+          row[header] =
+            values[index] !== undefined
+              ? values[index].trim()
+              : "";
+        });
 
-      // Satellite Objects
-      createSatellites();
-
-      // Trajectories & Conjunction Lines
-      createTrajectoryLines();
-
-      window.addEventListener("resize", onWindowResize);
+        return row;
+      });
     }
 
-    function createStarfield() {
-      const starGeom = new THREE.BufferGeometry();
-      const starCount = 2000;
-      const starPos = new Float32Array(starCount * 3);
-      for (let i = 0; i < starCount * 3; i += 3) {
-        const r = 200 + Math.random() * 300;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        starPos[i] = r * Math.sin(phi) * Math.cos(theta);
-        starPos[i + 1] = r * Math.sin(phi) * Math.sin(theta);
-        starPos[i + 2] = r * Math.cos(phi);
+
+    // ============================================================
+    // LOAD VERIFIED SGP4 OUTPUT
+    // ============================================================
+
+    async function loadRealOrbitalData() {
+
+      const response = await fetch(ORBITAL_DATA_PATH);
+
+      if (!response.ok) {
+        throw new Error(
+          `Could not load ${ORBITAL_DATA_PATH} (${response.status})`
+        );
       }
-      starGeom.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-      const starMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.8, transparent: true, opacity: 0.8 });
-      const stars = new THREE.Points(starGeom, starMat);
+
+      const csvText = await response.text();
+
+      const rows = parseCSV(csvText);
+
+      const grouped = {};
+
+
+      rows.forEach(row => {
+
+        const time = row.time;
+
+        if (!grouped[time]) {
+          grouped[time] = {};
+        }
+
+        grouped[time][row.object] = {
+
+          time: time,
+
+          x: Number(row.x_km),
+          y: Number(row.y_km),
+          z: Number(row.z_km),
+
+          vx: Number(row.vx_km_s),
+          vy: Number(row.vy_km_s),
+          vz: Number(row.vz_km_s)
+        };
+      });
+
+
+      realStates = Object.keys(grouped)
+        .sort()
+        .map(time => ({
+
+          time: time,
+
+          cartosat:
+            grouped[time]["CARTOSAT-3"],
+
+          pslv:
+            grouped[time]["PSLV R/B"]
+
+        }))
+        .filter(frame =>
+          frame.cartosat &&
+          frame.pslv
+        );
+
+
+      if (realStates.length === 0) {
+
+        throw new Error(
+          "No synchronized CARTOSAT-3 / PSLV R/B states found."
+        );
+      }
+
+
+      realDataReady = true;
+
+      realFrameIndex = 0;
+      realFrameAccumulator = 0;
+
+
+      console.log(
+        `Loaded ${realStates.length} synchronized SGP4 frames.`
+      );
+
+      console.log(
+        "First SGP4 frame:",
+        realStates[0]
+      );
+
+      console.log(
+        "Last SGP4 frame:",
+        realStates[realStates.length - 1]
+      );
+    }
+
+
+    // ============================================================
+    // LOAD VERIFIED ENCOUNTER ANALYSIS
+    // ============================================================
+
+    async function loadEncounterAnalysis() {
+
+      try {
+
+        const response =
+          await fetch(ANALYSIS_DATA_PATH);
+
+        if (!response.ok) {
+
+          console.warn(
+            `Could not load ${ANALYSIS_DATA_PATH}`
+          );
+
+          return;
+        }
+
+
+        const rows =
+          parseCSV(await response.text());
+
+
+        const distanceRows = rows
+          .map(row => ({
+
+            time: row.time,
+
+            distance:
+              Number(row.distance_km)
+
+          }))
+          .filter(row =>
+            Number.isFinite(row.distance)
+          );
+
+
+        if (!distanceRows.length) {
+          return;
+        }
+
+
+        const closest =
+          distanceRows.reduce(
+            (minimum, current) =>
+              current.distance < minimum.distance
+                ? current
+                : minimum
+          );
+
+
+        realCAD = closest.distance;
+
+        realTCA = closest.time;
+
+
+        console.log(
+          `Verified CAD: ${realCAD.toFixed(2)} km`
+        );
+
+        console.log(
+          `Verified TCA: ${realTCA}`
+        );
+
+      } catch (error) {
+
+        console.warn(
+          "Encounter analysis could not be loaded:",
+          error
+        );
+      }
+    }
+
+
+    // ============================================================
+    // FALLBACK CAD CALCULATION
+    // ============================================================
+
+    function calculateFallbackSummary() {
+
+      if (!realStates.length) {
+        return;
+      }
+
+
+      let closest = {
+
+        distance: Infinity,
+
+        time: realStates[0].time
+
+      };
+
+
+      realStates.forEach(frame => {
+
+        const dx =
+          frame.cartosat.x -
+          frame.pslv.x;
+
+        const dy =
+          frame.cartosat.y -
+          frame.pslv.y;
+
+        const dz =
+          frame.cartosat.z -
+          frame.pslv.z;
+
+
+        const distance =
+          Math.sqrt(
+            dx * dx +
+            dy * dy +
+            dz * dz
+          );
+
+
+        if (distance < closest.distance) {
+
+          closest = {
+
+            distance: distance,
+
+            time: frame.time
+
+          };
+        }
+      });
+
+
+      realCAD = closest.distance;
+
+      realTCA = closest.time;
+    }
+
+
+    // ============================================================
+    // TIME FORMATTING
+    // ============================================================
+
+    function formatUtcTime(timestamp) {
+
+      const date =
+        new Date(timestamp);
+
+
+      if (Number.isNaN(date.getTime())) {
+        return timestamp;
+      }
+
+
+      return (
+        date
+          .toISOString()
+          .replace("T", " ")
+          .substring(0, 19)
+        + " UTC"
+      );
+    }
+
+
+    // ============================================================
+    // THREE.JS INITIALIZATION
+    // ============================================================
+
+    function initThree() {
+
+      const canvas =
+        document.getElementById(
+          "webgl-canvas"
+        );
+
+
+      scene = new THREE.Scene();
+
+      scene.background =
+        new THREE.Color(0x060812);
+
+
+      camera =
+        new THREE.PerspectiveCamera(
+          45,
+          window.innerWidth /
+          window.innerHeight,
+          0.1,
+          1000
+        );
+
+
+      camera.position.set(
+        12,
+        10,
+        18
+      );
+
+
+      renderer =
+        new THREE.WebGLRenderer({
+
+          canvas,
+
+          antialias: true
+
+        });
+
+
+      renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+      );
+
+
+      renderer.setPixelRatio(
+        Math.min(
+          window.devicePixelRatio,
+          2
+        )
+      );
+
+
+      controls =
+        new THREE.OrbitControls(
+          camera,
+          renderer.domElement
+        );
+
+
+      controls.enableDamping = true;
+
+      controls.dampingFactor = 0.05;
+
+      controls.minDistance = 7;
+
+      controls.maxDistance = 50;
+
+
+      // ----------------------------------------------------------
+      // Lighting
+      // ----------------------------------------------------------
+
+      const ambientLight =
+        new THREE.AmbientLight(
+          0x223344,
+          1.2
+        );
+
+      scene.add(ambientLight);
+
+
+      const sunLight =
+        new THREE.DirectionalLight(
+          0xffffff,
+          2.0
+        );
+
+      sunLight.position.set(
+        30,
+        20,
+        20
+      );
+
+      scene.add(sunLight);
+
+
+      // ----------------------------------------------------------
+      // Scene elements
+      // ----------------------------------------------------------
+
+      createStarfield();
+
+      createEarth();
+
+      createSatellites();
+
+      createTrajectoryLines();
+
+
+      window.addEventListener(
+        "resize",
+        onWindowResize
+      );
+    }
+
+
+    // ============================================================
+    // STARFIELD
+    // ============================================================
+
+    function createStarfield() {
+
+      const starGeom =
+        new THREE.BufferGeometry();
+
+
+      const starCount = 2000;
+
+      const starPos =
+        new Float32Array(
+          starCount * 3
+        );
+
+
+      for (
+        let i = 0;
+        i < starCount * 3;
+        i += 3
+      ) {
+
+        const r =
+          200 +
+          Math.random() * 300;
+
+        const theta =
+          Math.random() *
+          Math.PI * 2;
+
+        const phi =
+          Math.acos(
+            2 * Math.random() - 1
+          );
+
+
+        starPos[i] =
+          r *
+          Math.sin(phi) *
+          Math.cos(theta);
+
+        starPos[i + 1] =
+          r *
+          Math.sin(phi) *
+          Math.sin(theta);
+
+        starPos[i + 2] =
+          r *
+          Math.cos(phi);
+      }
+
+
+      starGeom.setAttribute(
+        "position",
+        new THREE.BufferAttribute(
+          starPos,
+          3
+        )
+      );
+
+
+      const starMat =
+        new THREE.PointsMaterial({
+
+          color: 0x94a3b8,
+
+          size: 0.8,
+
+          transparent: true,
+
+          opacity: 0.8
+        });
+
+
+      const stars =
+        new THREE.Points(
+          starGeom,
+          starMat
+        );
+
+
       scene.add(stars);
     }
 
+
+    // ============================================================
+    // EARTH
+    // ============================================================
+
     function createEarth() {
-      const geom = new THREE.SphereGeometry(EARTH_RADIUS_SCALED, 64, 64);
-      const mat = new THREE.MeshPhongMaterial({
-        color: 0x0f2b48,
-        emissive: 0x051322,
-        specular: 0x1e3a5f,
-        shininess: 25,
-        wireframe: false
-      });
-      earthMesh = new THREE.Mesh(geom, mat);
+
+      const geom =
+        new THREE.SphereGeometry(
+          EARTH_RADIUS_SCALED,
+          64,
+          64
+        );
+
+
+      const mat =
+        new THREE.MeshPhongMaterial({
+
+          color: 0x0f2b48,
+
+          emissive: 0x051322,
+
+          specular: 0x1e3a5f,
+
+          shininess: 25,
+
+          wireframe: false
+        });
+
+
+      earthMesh =
+        new THREE.Mesh(
+          geom,
+          mat
+        );
+
+
       scene.add(earthMesh);
 
-      // Lat/Long Wireframe Overlay
-      const wireGeom = new THREE.SphereGeometry(EARTH_RADIUS_SCALED * 1.002, 32, 24);
-      const wireMat = new THREE.MeshBasicMaterial({
-        color: 0x1e3a8a,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.35
-      });
-      const wire = new THREE.Mesh(wireGeom, wireMat);
+
+      // Latitude / longitude wireframe
+
+      const wireGeom =
+        new THREE.SphereGeometry(
+          EARTH_RADIUS_SCALED * 1.002,
+          32,
+          24
+        );
+
+
+      const wireMat =
+        new THREE.MeshBasicMaterial({
+
+          color: 0x1e3a8a,
+
+          wireframe: true,
+
+          transparent: true,
+
+          opacity: 0.35
+        });
+
+
+      const wire =
+        new THREE.Mesh(
+          wireGeom,
+          wireMat
+        );
+
+
       earthMesh.add(wire);
 
-      // Equator Ring
-      const eqGeom = new THREE.BufferGeometry();
+
+      // Equator
+
+      const eqGeom =
+        new THREE.BufferGeometry();
+
+
       const eqPts = [];
-      for (let i = 0; i <= 64; i++) {
-        const th = (i / 64) * Math.PI * 2;
-        eqPts.push(EARTH_RADIUS_SCALED * 1.004 * Math.cos(th), 0, EARTH_RADIUS_SCALED * 1.004 * Math.sin(th));
+
+
+      for (
+        let i = 0;
+        i <= 64;
+        i++
+      ) {
+
+        const th =
+          (i / 64) *
+          Math.PI * 2;
+
+
+        eqPts.push(
+
+          EARTH_RADIUS_SCALED *
+          1.004 *
+          Math.cos(th),
+
+          0,
+
+          EARTH_RADIUS_SCALED *
+          1.004 *
+          Math.sin(th)
+
+        );
       }
-      eqGeom.setAttribute('position', new THREE.Float32BufferAttribute(eqPts, 3));
-      const eqMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
-      const eqLine = new THREE.Line(eqGeom, eqMat);
+
+
+      eqGeom.setAttribute(
+
+        "position",
+
+        new THREE.Float32BufferAttribute(
+          eqPts,
+          3
+        )
+      );
+
+
+      const eqMat =
+        new THREE.LineBasicMaterial({
+
+          color: 0x38bdf8,
+
+          transparent: true,
+
+          opacity: 0.7
+        });
+
+
+      const eqLine =
+        new THREE.Line(
+          eqGeom,
+          eqMat
+        );
+
+
       earthMesh.add(eqLine);
     }
 
+
+    // ============================================================
+    // SATELLITES
+    // ============================================================
+
     function createSatellites() {
-      // Primary Sat (CARTOSAT-3)
-      const satGeom = new THREE.SphereGeometry(0.18, 16, 16);
-      const satMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-      satMesh = new THREE.Mesh(satGeom, satMat);
+
+      // CARTOSAT-3
+
+      const satGeom =
+        new THREE.SphereGeometry(
+          0.18,
+          16,
+          16
+        );
+
+
+      const satMat =
+        new THREE.MeshBasicMaterial({
+          color: 0x00f0ff
+        });
+
+
+      satMesh =
+        new THREE.Mesh(
+          satGeom,
+          satMat
+        );
+
+
       scene.add(satMesh);
 
-      // Secondary (PSLV R/B / Debris)
-      const secGeom = new THREE.BoxGeometry(0.24, 0.24, 0.24);
-      const secMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
-      secMesh = new THREE.Mesh(secGeom, secMat);
+
+      // PSLV R/B
+
+      const secGeom =
+        new THREE.BoxGeometry(
+          0.24,
+          0.24,
+          0.24
+        );
+
+
+      const secMat =
+        new THREE.MeshBasicMaterial({
+          color: 0xf43f5e
+        });
+
+
+      secMesh =
+        new THREE.Mesh(
+          secGeom,
+          secMat
+        );
+
+
       scene.add(secMesh);
     }
 
-    function createTrajectoryLines() {
-      // Dynamic Trails
-      satTrailGeom = new THREE.BufferGeometry();
-      secTrailGeom = new THREE.BufferGeometry();
 
-      satTrailLine = new THREE.Line(satTrailGeom, new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 }));
-      secTrailLine = new THREE.Line(secTrailGeom, new THREE.LineBasicMaterial({ color: 0xfb7185, linewidth: 2 }));
+    // ============================================================
+    // TRAJECTORY LINES
+    // ============================================================
+
+    function createTrajectoryLines() {
+
+      satTrailGeom =
+        new THREE.BufferGeometry();
+
+      secTrailGeom =
+        new THREE.BufferGeometry();
+
+
+      satTrailLine =
+        new THREE.Line(
+
+          satTrailGeom,
+
+          new THREE.LineBasicMaterial({
+
+            color: 0x38bdf8,
+
+            linewidth: 2
+          })
+        );
+
+
+      secTrailLine =
+        new THREE.Line(
+
+          secTrailGeom,
+
+          new THREE.LineBasicMaterial({
+
+            color: 0xfb7185,
+
+            linewidth: 2
+          })
+        );
+
+
       scene.add(satTrailLine);
+
       scene.add(secTrailLine);
 
-      // Conjunction line connecting both objects
-      const conjGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-      conjunctionLine = new THREE.Line(conjGeom, new THREE.LineDashedMaterial({
-        color: 0xef4444,
-        dashSize: 0.3,
-        gapSize: 0.2,
-        linewidth: 2
-      }));
+
+      // ----------------------------------------------------------
+      // Conjunction line
+      // ----------------------------------------------------------
+
+      const conjGeom =
+        new THREE.BufferGeometry()
+          .setFromPoints([
+
+            new THREE.Vector3(),
+
+            new THREE.Vector3()
+
+          ]);
+
+
+      conjunctionLine =
+        new THREE.Line(
+
+          conjGeom,
+
+          new THREE.LineDashedMaterial({
+
+            color: 0xef4444,
+
+            dashSize: 0.3,
+
+            gapSize: 0.2,
+
+            linewidth: 2
+          })
+        );
+
+
       conjunctionLine.computeLineDistances();
+
+      conjunctionLine.visible = false;
+
       scene.add(conjunctionLine);
 
-      // Static Orbit Ellipses for Real Mode
-      satOrbitLine = createOrbitEllipse(cartosatA * SCALE, cartosatInc, cartosatRAAN, 0x00f0ff);
-      secOrbitLine = createOrbitEllipse(pslvA * SCALE, pslvInc, pslvRAAN, 0xf43f5e);
+
+      // ----------------------------------------------------------
+      // Full SGP4 trajectories
+      // ----------------------------------------------------------
+
+      satOrbitLine =
+        new THREE.Line(
+
+          new THREE.BufferGeometry(),
+
+          new THREE.LineBasicMaterial({
+
+            color: 0x00f0ff,
+
+            transparent: true,
+
+            opacity: 0.45
+          })
+        );
+
+
+      secOrbitLine =
+        new THREE.Line(
+
+          new THREE.BufferGeometry(),
+
+          new THREE.LineBasicMaterial({
+
+            color: 0xfb7185,
+
+            transparent: true,
+
+            opacity: 0.45
+          })
+        );
+
+
       scene.add(satOrbitLine);
+
       scene.add(secOrbitLine);
     }
 
-    function createOrbitEllipse(radius, inc, raan, color) {
-      const pts = [];
-      const segments = 128;
-      for (let i = 0; i <= segments; i++) {
-        const u = (i / segments) * Math.PI * 2;
-        // Orbital plane coordinates
-        const x_orb = radius * Math.cos(u);
-        const y_orb = radius * Math.sin(u);
-        // Rotate by inclination and RAAN
-        const x = x_orb * Math.cos(raan) - y_orb * Math.cos(inc) * Math.sin(raan);
-        const z = x_orb * Math.sin(raan) + y_orb * Math.cos(inc) * Math.cos(raan);
-        const y = y_orb * Math.sin(inc);
-        pts.push(new THREE.Vector3(x, y, z));
+
+    // ============================================================
+    // BUILD TRAJECTORIES DIRECTLY FROM SGP4 CSV
+    // ============================================================
+
+    function updateRealTrajectoryLines() {
+
+      if (
+        !realDataReady ||
+        !realStates.length
+      ) {
+        return;
       }
-      const geom = new THREE.BufferGeometry().setFromPoints(pts);
-      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.45 });
-      return new THREE.Line(geom, mat);
+
+
+      const satPoints =
+        realStates.map(frame =>
+
+          new THREE.Vector3(
+
+            frame.cartosat.x * SCALE,
+
+            frame.cartosat.y * SCALE,
+
+            frame.cartosat.z * SCALE
+
+          )
+        );
+
+
+      const secPoints =
+        realStates.map(frame =>
+
+          new THREE.Vector3(
+
+            frame.pslv.x * SCALE,
+
+            frame.pslv.y * SCALE,
+
+            frame.pslv.z * SCALE
+
+          )
+        );
+
+
+      satOrbitLine.geometry.dispose();
+
+      satOrbitLine.geometry =
+        new THREE.BufferGeometry()
+          .setFromPoints(
+            satPoints
+          );
+
+
+      secOrbitLine.geometry.dispose();
+
+      secOrbitLine.geometry =
+        new THREE.BufferGeometry()
+          .setFromPoints(
+            secPoints
+          );
     }
 
-    function calculateRealPositions(tSec) {
-      // CARTOSAT-3
-      const u1 = (tSec / cartosatPeriodSec) * Math.PI * 2 + 0.5;
-      const r1 = cartosatA;
-      const x1_orb = r1 * Math.cos(u1);
-      const y1_orb = r1 * Math.sin(u1);
-      const x1 = x1_orb * Math.cos(cartosatRAAN) - y1_orb * Math.cos(cartosatInc) * Math.sin(cartosatRAAN);
-      const z1 = x1_orb * Math.sin(cartosatRAAN) + y1_orb * Math.cos(cartosatInc) * Math.cos(cartosatRAAN);
-      const y1 = y1_orb * Math.sin(cartosatInc);
 
-      // PSLV R/B
-      const u2 = (tSec / pslvPeriodSec) * Math.PI * 2 + 1.8;
-      const r2 = pslvA;
-      const x2_orb = r2 * Math.cos(u2);
-      const y2_orb = r2 * Math.sin(u2);
-      const x2 = x2_orb * Math.cos(pslvRAAN) - y2_orb * Math.cos(pslvInc) * Math.sin(pslvRAAN);
-      const z2 = x2_orb * Math.sin(pslvRAAN) + y2_orb * Math.cos(pslvInc) * Math.cos(pslvRAAN);
-      const y2 = y2_orb * Math.sin(pslvInc);
+    // ============================================================
+    // GET SYNTHETIC TEST STATE
+    // ============================================================
 
-      // Approximate velocity vectors
-      const v1 = 7.592;
-      const v2 = 7.678;
+    function getSyntheticState(t) {
 
       return {
-        posA: [x1, y1, z1],
-        velA: [-v1 * Math.sin(u1), v1 * Math.cos(u1), 0],
-        posB: [x2, y2, z2],
-        velB: [-v2 * Math.sin(u2), v2 * Math.cos(u2), 0]
+
+        cartosat: {
+
+          x: -1000 + 5 * t,
+
+          y: 7000,
+
+          z: 0,
+
+          vx: 5,
+
+          vy: 0,
+
+          vz: 0
+        },
+
+
+        pslv: {
+
+          x: 1000 - 5 * t,
+
+          y: 7005,
+
+          z: 0,
+
+          vx: -5,
+
+          vy: 0,
+
+          vz: 0
+        }
       };
     }
 
-    function calculateSyntheticPositions(tSec) {
-      // Match Person 1 synthetic close approach test:
-      // Primary: [-1000 + 5*t, 7000, 0]
-      // Debris:  [1000 - 5*t, 7005, 0]
-      // Min distance is 5.00 km at t = 200s
-      const x1 = -1000.0 + 5.0 * tSec;
-      const y1 = 7000.0;
-      const z1 = 0.0;
 
-      const x2 = 1000.0 - 5.0 * tSec;
-      const y2 = 7005.0;
-      const z2 = 0.0;
-
-      return {
-        posA: [x1, y1, z1],
-        velA: [5.0, 0.0, 0.0],
-        posB: [x2, y2, z2],
-        velB: [-5.0, 0.0, 0.0]
-      };
-    }
+    // ============================================================
+    // MAIN SIMULATION UPDATE
+    // ============================================================
 
     function updateSimulation(dt) {
-      if (isPaused) return;
 
-      let states;
-      let timeText;
-
-      if (mode === "real") {
-        realTimeSec += dt * speed;
-        states = calculateRealPositions(realTimeSec);
-
-        const curDate = new Date(epochDate.getTime() + realTimeSec * 1000);
-        timeText = curDate.toISOString().replace("T", " ").substring(0, 19) + " UTC";
-      } else {
-        syntheticTimeSec += dt * (speed * 0.1);
-        states = calculateSyntheticPositions(syntheticTimeSec);
-        timeText = `T+ ${syntheticTimeSec.toFixed(1)} s`;
+      if (
+        !realDataReady &&
+        mode === "real"
+      ) {
+        return;
       }
 
-      const pA = states.posA;
-      const pB = states.posB;
-      const vA = states.velA;
-      const vB = states.velB;
 
-      // Update 3D Object Positions
-      satMesh.position.set(pA[0] * SCALE, pA[1] * SCALE, pA[2] * SCALE);
-      secMesh.position.set(pB[0] * SCALE, pB[1] * SCALE, pB[2] * SCALE);
+      let state;
 
-      // Update Trails
-      satTrailPositions.push(new THREE.Vector3(pA[0] * SCALE, pA[1] * SCALE, pA[2] * SCALE));
-      secTrailPositions.push(new THREE.Vector3(pB[0] * SCALE, pB[1] * SCALE, pB[2] * SCALE));
-      if (satTrailPositions.length > MAX_TRAIL) satTrailPositions.shift();
-      if (secTrailPositions.length > MAX_TRAIL) secTrailPositions.shift();
+      let timeText;
 
-      satTrailGeom.setFromPoints(satTrailPositions);
-      secTrailGeom.setFromPoints(secTrailPositions);
 
-      // Relative Motion & Analysis Engine
-      const dx = pA[0] - pB[0];
-      const dy = pA[1] - pB[1];
-      const dz = pA[2] - pB[2];
-      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      // ==========================================================
+      // REAL SGP4 MODE
+      // ==========================================================
 
-      const dvx = vA[0] - vB[0];
-      const dvy = vA[1] - vB[1];
-      const dvz = vA[2] - vB[2];
-      const relSpd = Math.sqrt(dvx * dvx + dvy * dvy + dvz * dvz);
+      if (mode === "real") {
 
-      const closingSpd = dist > 0 ? -(dx * dvx + dy * dvy + dz * dvz) / dist : 0;
-      let cosAng = (dist > 0 && relSpd > 0) ? (dx * dvx + dy * dvy + dz * dvz) / (dist * relSpd) : 0;
-      cosAng = Math.max(-1, Math.min(1, cosAng));
-      const appAngle = Math.acos(cosAng) * 180 / Math.PI;
+        if (!realStates.length) {
+          return;
+        }
 
-      // Update Conjunction Line
+
+        // One frame = one simulated minute.
+        // speed = playback multiplier.
+
+        if (!isPaused) {
+
+          realFrameAccumulator +=
+            dt * speed;
+
+
+          while (
+            realFrameAccumulator >= 1
+          ) {
+
+            realFrameAccumulator -= 1;
+
+            realFrameIndex++;
+
+            if (
+              realFrameIndex >=
+              realStates.length
+            ) {
+
+              realFrameIndex =
+                realStates.length - 1;
+
+              isPaused = true;
+
+              document.getElementById(
+                "btn-play"
+              ).innerText = "▶ PLAY";
+
+              document.getElementById(
+                "hud-engine-status"
+              ).innerText = "PLAYBACK COMPLETE";
+
+              document.getElementById(
+                "hud-engine-status"
+              ).style.color = "#f59e0b";
+
+              break;
+            }
+          }
+        }
+
+
+        state =
+          realStates[
+          realFrameIndex
+          ];
+
+
+        timeText =
+          formatUtcTime(
+            state.time
+          );
+      }
+
+
+      // ==========================================================
+      // SYNTHETIC MODE
+      // ==========================================================
+
+      else {
+
+        if (!isPaused) {
+
+          syntheticTimeSec +=
+            dt * speed;
+        }
+
+
+        if (
+          syntheticTimeSec > 400
+        ) {
+
+          syntheticTimeSec = 0;
+
+          satTrailPositions.length = 0;
+
+          secTrailPositions.length = 0;
+        }
+
+
+        state =
+          getSyntheticState(
+            syntheticTimeSec
+          );
+
+
+        timeText =
+          `SYNTHETIC T+${syntheticTimeSec.toFixed(1)} s`;
+      }
+
+
+      // ==========================================================
+      // CURRENT POSITIONS / VELOCITIES
+      // ==========================================================
+
+      const pA = [
+
+        state.cartosat.x,
+
+        state.cartosat.y,
+
+        state.cartosat.z
+      ];
+
+
+      const vA = [
+
+        state.cartosat.vx,
+
+        state.cartosat.vy,
+
+        state.cartosat.vz
+      ];
+
+
+      const pB = [
+
+        state.pslv.x,
+
+        state.pslv.y,
+
+        state.pslv.z
+      ];
+
+
+      const vB = [
+
+        state.pslv.vx,
+
+        state.pslv.vy,
+
+        state.pslv.vz
+      ];
+
+
+      // ==========================================================
+      // UPDATE 3D OBJECT POSITIONS
+      // ==========================================================
+
+      satMesh.position.set(
+
+        pA[0] * SCALE,
+
+        pA[1] * SCALE,
+
+        pA[2] * SCALE
+      );
+
+
+      secMesh.position.set(
+
+        pB[0] * SCALE,
+
+        pB[1] * SCALE,
+
+        pB[2] * SCALE
+      );
+
+
+      // ==========================================================
+      // TRAILS
+      // ==========================================================
+
+      satTrailPositions.push(
+
+        new THREE.Vector3(
+
+          pA[0] * SCALE,
+
+          pA[1] * SCALE,
+
+          pA[2] * SCALE
+        )
+      );
+
+
+      secTrailPositions.push(
+
+        new THREE.Vector3(
+
+          pB[0] * SCALE,
+
+          pB[1] * SCALE,
+
+          pB[2] * SCALE
+        )
+      );
+
+
+      if (
+        satTrailPositions.length >
+        MAX_TRAIL
+      ) {
+        satTrailPositions.shift();
+      }
+
+
+      if (
+        secTrailPositions.length >
+        MAX_TRAIL
+      ) {
+        secTrailPositions.shift();
+      }
+
+
+      satTrailGeom.setFromPoints(
+        satTrailPositions
+      );
+
+
+      secTrailGeom.setFromPoints(
+        secTrailPositions
+      );
+
+
+      // ==========================================================
+      // RELATIVE MOTION ANALYSIS
+      // Same definitions as analysis_engine.py
+      // ==========================================================
+
+      const dx =
+        pA[0] - pB[0];
+
+      const dy =
+        pA[1] - pB[1];
+
+      const dz =
+        pA[2] - pB[2];
+
+
+      const dist =
+        Math.sqrt(
+
+          dx * dx +
+
+          dy * dy +
+
+          dz * dz
+
+        );
+
+
+      const dvx =
+        vA[0] - vB[0];
+
+      const dvy =
+        vA[1] - vB[1];
+
+      const dvz =
+        vA[2] - vB[2];
+
+
+      const relSpd =
+        Math.sqrt(
+
+          dvx * dvx +
+
+          dvy * dvy +
+
+          dvz * dvz
+
+        );
+
+
+      const dot =
+        dx * dvx +
+        dy * dvy +
+        dz * dvz;
+
+
+      const closingSpd =
+        dist > 0
+          ? -dot / dist
+          : 0;
+
+
+      let cosAng =
+        (
+          dist > 0 &&
+          relSpd > 0
+        )
+          ? dot /
+          (dist * relSpd)
+          : 0;
+
+
+      cosAng =
+        Math.max(
+          -1,
+          Math.min(
+            1,
+            cosAng
+          )
+        );
+
+
+      const appAngle =
+        Math.acos(
+          cosAng
+        ) *
+        180 /
+        Math.PI;
+
+
+      // ==========================================================
+      // CONJUNCTION VISUAL
+      // ==========================================================
+
       if (dist < 4000) {
+
         conjunctionLine.visible = true;
-        const pts = [satMesh.position, secMesh.position];
-        conjunctionLine.geometry.setFromPoints(pts);
-        conjunctionLine.computeLineDistances();
+
+        conjunctionLine.geometry
+          .setFromPoints([
+
+            satMesh.position,
+
+            secMesh.position
+
+          ]);
+
+        conjunctionLine
+          .computeLineDistances();
+
       } else {
+
         conjunctionLine.visible = false;
       }
 
-      // CAD & TCA Tracking
-      if (dist < cad_km) {
-        cad_km = dist;
-        tca_str = timeText;
-      }
 
-      // Proximity Thresholds
-      let status = "SAFE";
-      let level = "LOW";
-      if (dist <= 10.0) {
-        status = "CLOSE APPROACH";
-        level = "HIGH";
-        if (!closeApproachDetected) {
-          closeApproachDetected = true;
-          persistedRecord = { cad: cad_km, tca: tca_str };
-        }
-      } else if (dist <= 100.0) {
-        status = "MONITOR";
-        level = "MEDIUM";
-      }
-
-      if (closeApproachDetected) {
-        persistedRecord.cad = cad_km;
-        persistedRecord.tca = tca_str;
-      }
-
-      // Update DOM HUD Telemetry
-      document.getElementById("hud-time").innerText = timeText;
-      document.getElementById("cartosat-alt").innerText = `${(Math.sqrt(pA[0]**2 + pA[1]**2 + pA[2]**2) - R_EARTH).toFixed(2)} km`;
-      document.getElementById("cartosat-spd").innerText = `${Math.sqrt(vA[0]**2 + vA[1]**2 + vA[2]**2).toFixed(3)} km/s`;
-      document.getElementById("cartosat-pos").innerText = `[${pA[0].toFixed(1)}, ${pA[1].toFixed(1)}, ${pA[2].toFixed(1)}]`;
-
-      document.getElementById("pslv-alt").innerText = `${(Math.sqrt(pB[0]**2 + pB[1]**2 + pB[2]**2) - R_EARTH).toFixed(2)} km`;
-      document.getElementById("pslv-spd").innerText = `${Math.sqrt(vB[0]**2 + vB[1]**2 + vB[2]**2).toFixed(3)} km/s`;
-      document.getElementById("pslv-pos").innerText = `[${pB[0].toFixed(1)}, ${pB[1].toFixed(1)}, ${pB[2].toFixed(1)}]`;
-
-      document.getElementById("enc-dist").innerText = `${dist.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
-      document.getElementById("enc-rel-spd").innerText = `${relSpd.toFixed(4)} km/s`;
-      document.getElementById("enc-close-spd").innerText = `${closingSpd.toFixed(4)} km/s (${closingSpd > 0 ? 'APPROACH' : 'SEPARATING'})`;
-      document.getElementById("enc-angle").innerText = `${appAngle.toFixed(2)}°`;
-
-      document.getElementById("hud-cad").innerText = `${cad_km.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`;
-      document.getElementById("hud-tca").innerText = tca_str;
-
-      const badge = document.getElementById("status-badge");
-      badge.innerText = `STATUS: ${status} [${level}]`;
-      badge.className = `status-banner ${status === 'CLOSE APPROACH' ? 'close-approach' : (status === 'MONITOR' ? 'monitor' : '')}`;
-
-      const alarmBox = document.getElementById("alarm-box");
-      if (closeApproachDetected) {
-        alarmBox.style.display = "block";
-        document.getElementById("alarm-cad").innerText = `${persistedRecord.cad.toFixed(2)} km`;
-        document.getElementById("alarm-tca").innerText = persistedRecord.tca;
-      } else {
-        alarmBox.style.display = "none";
-      }
-    }
-
-    function resetSimulation() {
-      realTimeSec = 0;
-      syntheticTimeSec = 0;
-      cad_km = Infinity;
-      tca_str = "Calculating...";
-      closeApproachDetected = false;
-      persistedRecord = null;
-      satTrailPositions.length = 0;
-      secTrailPositions.length = 0;
-      satTrailGeom.setFromPoints([]);
-      secTrailGeom.setFromPoints([]);
-    }
-
-    function setMode(newMode) {
-      mode = newMode;
-      resetSimulation();
-
-      const realBtn = document.getElementById("btn-mode-real");
-      const synBtn = document.getElementById("btn-mode-synthetic");
-      const badge = document.getElementById("mode-badge");
-      const modeText = document.getElementById("mode-text");
-      const pName = document.getElementById("primary-name");
-      const sName = document.getElementById("secondary-name");
+      // ==========================================================
+      // CAD / TCA
+      // ==========================================================
 
       if (mode === "real") {
-        realBtn.className = "btn active";
-        synBtn.className = "btn danger";
-        badge.innerText = "OPERATIONAL";
-        badge.style.borderColor = "var(--accent-blue)";
-        modeText.innerText = "REAL TRACKED DATA";
-        pName.innerText = "CARTOSAT-3 (NORAD 44804)";
-        sName.innerText = "PSLV R/B (NORAD 44805)";
-        satOrbitLine.visible = true;
-        secOrbitLine.visible = true;
-        camera.position.set(12, 10, 18);
+
+        if (realCAD !== null) {
+
+          cad_km =
+            realCAD;
+        }
+
+
+        if (realTCA !== null) {
+
+          tca_str =
+            formatUtcTime(
+              realTCA
+            );
+        }
+
       } else {
-        realBtn.className = "btn";
-        synBtn.className = "btn danger active";
-        badge.innerText = "SYNTHETIC TEST";
-        badge.style.borderColor = "var(--accent-red)";
-        modeText.innerText = "CONTROLLED ENCOUNTER (5km CAD)";
-        pName.innerText = "TEST SATELLITE (A)";
-        sName.innerText = "TEST DEBRIS (B)";
-        satOrbitLine.visible = false;
-        secOrbitLine.visible = false;
-        camera.position.set(0, 10, 15);
+
+        if (dist < cad_km) {
+
+          cad_km = dist;
+
+          tca_str =
+            timeText;
+        }
       }
+
+
+      // ==========================================================
+      // RISK CLASSIFICATION
+      // ==========================================================
+
+      let status = "SAFE";
+
+      let level = "LOW";
+
+
+      if (
+        dist <=
+        CLOSE_APPROACH_KM
+      ) {
+
+        status =
+          "CLOSE APPROACH";
+
+        level =
+          "HIGH";
+
+
+        if (
+          !closeApproachDetected
+        ) {
+
+          closeApproachDetected =
+            true;
+
+
+          persistedRecord = {
+
+            cad: cad_km,
+
+            tca: tca_str
+          };
+        }
+
+      } else if (
+        dist <=
+        SAFE_DISTANCE_KM
+      ) {
+
+        status =
+          "MONITOR";
+
+        level =
+          "MEDIUM";
+      }
+
+
+      if (
+        closeApproachDetected &&
+        persistedRecord
+      ) {
+
+        persistedRecord.cad =
+          cad_km;
+
+        persistedRecord.tca =
+          tca_str;
+      }
+
+
+      // ==========================================================
+      // HUD — TIME
+      // ==========================================================
+
+      document.getElementById(
+        "hud-time"
+      ).innerText =
+        timeText;
+
+
+      // ==========================================================
+      // CARTOSAT TELEMETRY
+      // ==========================================================
+
+      const satAltitude =
+        Math.sqrt(
+
+          pA[0] ** 2 +
+
+          pA[1] ** 2 +
+
+          pA[2] ** 2
+
+        ) - R_EARTH;
+
+
+      const satSpeed =
+        Math.sqrt(
+
+          vA[0] ** 2 +
+
+          vA[1] ** 2 +
+
+          vA[2] ** 2
+
+        );
+
+
+      document.getElementById(
+        "cartosat-alt"
+      ).innerText =
+        `${satAltitude.toFixed(2)} km`;
+
+
+      document.getElementById(
+        "cartosat-spd"
+      ).innerText =
+        `${satSpeed.toFixed(3)} km/s`;
+
+
+      document.getElementById(
+        "cartosat-pos"
+      ).innerText =
+        `[${pA[0].toFixed(1)}, ` +
+        `${pA[1].toFixed(1)}, ` +
+        `${pA[2].toFixed(1)}]`;
+
+
+      // ==========================================================
+      // PSLV R/B TELEMETRY
+      // ==========================================================
+
+      const pslvAltitude =
+        Math.sqrt(
+
+          pB[0] ** 2 +
+
+          pB[1] ** 2 +
+
+          pB[2] ** 2
+
+        ) - R_EARTH;
+
+
+      const pslvSpeed =
+        Math.sqrt(
+
+          vB[0] ** 2 +
+
+          vB[1] ** 2 +
+
+          vB[2] ** 2
+
+        );
+
+
+      document.getElementById(
+        "pslv-alt"
+      ).innerText =
+        `${pslvAltitude.toFixed(2)} km`;
+
+
+      document.getElementById(
+        "pslv-spd"
+      ).innerText =
+        `${pslvSpeed.toFixed(3)} km/s`;
+
+
+      document.getElementById(
+        "pslv-pos"
+      ).innerText =
+        `[${pB[0].toFixed(1)}, ` +
+        `${pB[1].toFixed(1)}, ` +
+        `${pB[2].toFixed(1)}]`;
+
+
+      // ==========================================================
+      // ENCOUNTER TELEMETRY
+      // ==========================================================
+
+      document.getElementById(
+        "enc-dist"
+      ).innerText =
+        `${dist.toLocaleString(
+          undefined,
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }
+        )} km`;
+
+
+      document.getElementById(
+        "enc-rel-spd"
+      ).innerText =
+        `${relSpd.toFixed(4)} km/s`;
+
+
+      document.getElementById(
+        "enc-close-spd"
+      ).innerText =
+        `${closingSpd.toFixed(4)} km/s ` +
+        `(${closingSpd > 0 ? "APPROACH" : "SEPARATING"})`;
+
+
+      document.getElementById(
+        "enc-angle"
+      ).innerText =
+        `${appAngle.toFixed(2)}°`;
+
+
+      // ==========================================================
+      // CAD / TCA DISPLAY
+      // ==========================================================
+
+      document.getElementById(
+        "hud-cad"
+      ).innerText =
+        `${cad_km.toLocaleString(
+          undefined,
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }
+        )} km`;
+
+
+      document.getElementById(
+        "hud-tca"
+      ).innerText =
+        tca_str;
+
+
+      // ==========================================================
+      // STATUS DISPLAY
+      // ==========================================================
+
+      const badge =
+        document.getElementById(
+          "status-badge"
+        );
+
+
+      badge.innerText =
+        `STATUS: ${status} [${level}]`;
+
+
+      badge.className =
+        `status-banner ${status === "CLOSE APPROACH"
+          ? "close-approach"
+          : (
+            status === "MONITOR"
+              ? "monitor"
+              : ""
+          )
+        }`;
+
+
+      // ==========================================================
+      // ALARM
+      // ==========================================================
+
+      const alarmBox =
+        document.getElementById(
+          "alarm-box"
+        );
+
+
+      if (closeApproachDetected) {
+
+        alarmBox.style.display =
+          "block";
+
+
+        document.getElementById(
+          "alarm-cad"
+        ).innerText =
+          `${persistedRecord.cad.toFixed(2)} km`;
+
+
+        document.getElementById(
+          "alarm-tca"
+        ).innerText =
+          persistedRecord.tca;
+
+      } else {
+
+        alarmBox.style.display =
+          "none";
+      }
+    }
+
+
+    // ============================================================
+    // RESET
+    // ============================================================
+
+    function resetSimulation() {
+
+      realFrameIndex = 0;
+
+      realFrameAccumulator = 0;
+
+      syntheticTimeSec = 0;
+
+      closeApproachDetected =
+        false;
+
+      persistedRecord = null;
+
+
+      if (mode === "real") {
+
+        if (
+          realCAD === null ||
+          realTCA === null
+        ) {
+
+          calculateFallbackSummary();
+        }
+
+
+        cad_km =
+          realCAD !== null
+            ? realCAD
+            : Infinity;
+
+
+        tca_str =
+          realTCA !== null
+            ? formatUtcTime(realTCA)
+            : "Calculating...";
+
+      } else {
+
+        cad_km =
+          Infinity;
+
+        tca_str =
+          "Calculating...";
+      }
+
+
+      satTrailPositions.length = 0;
+
+      secTrailPositions.length = 0;
+
+
+      if (satTrailGeom) {
+
+        satTrailGeom.setFromPoints([]);
+      }
+
+
+      if (secTrailGeom) {
+
+        secTrailGeom.setFromPoints([]);
+      }
+
+
+      if (
+        mode === "real" &&
+        realDataReady
+      ) {
+
+        updateSimulation(0);
+      }
+    }
+
+
+    // ============================================================
+    // MODE SWITCH
+    // ============================================================
+
+    function setMode(newMode) {
+
+      if (
+        newMode === "real" &&
+        !realDataReady
+      ) {
+
+        return;
+      }
+
+
+      mode = newMode;
+
+
+      resetSimulation();
+
+
+      const realBtn =
+        document.getElementById(
+          "btn-mode-real"
+        );
+
+
+      const synBtn =
+        document.getElementById(
+          "btn-mode-synthetic"
+        );
+
+
+      const badge =
+        document.getElementById(
+          "mode-badge"
+        );
+
+
+      const modeText =
+        document.getElementById(
+          "mode-text"
+        );
+
+
+      const pName =
+        document.getElementById(
+          "primary-name"
+        );
+
+
+      const sName =
+        document.getElementById(
+          "secondary-name"
+        );
+
+
+      if (mode === "real") {
+
+        realBtn.className =
+          "btn active";
+
+
+        synBtn.className =
+          "btn danger";
+
+
+        badge.innerText =
+          "D1 PROTOTYPE";
+
+
+        badge.style.borderColor =
+          "var(--accent-blue)";
+
+
+        modeText.innerText =
+          "REAL SGP4 DATA";
+
+
+        pName.innerText =
+          "CARTOSAT-3 (NORAD 44804)";
+
+
+        sName.innerText =
+          "PSLV R/B (NORAD 44805)";
+
+
+        satOrbitLine.visible =
+          true;
+
+
+        secOrbitLine.visible =
+          true;
+
+
+        camera.position.set(
+          12,
+          10,
+          18
+        );
+
+      } else {
+
+        realBtn.className =
+          "btn";
+
+
+        synBtn.className =
+          "btn danger active";
+
+
+        badge.innerText =
+          "SYNTHETIC TEST";
+
+
+        badge.style.borderColor =
+          "var(--accent-red)";
+
+
+        modeText.innerText =
+          "CONTROLLED ENCOUNTER (5km CAD)";
+
+
+        pName.innerText =
+          "TEST SATELLITE (A)";
+
+
+        sName.innerText =
+          "SYNTHETIC SECONDARY OBJECT (B)";
+
+
+        satOrbitLine.visible =
+          false;
+
+
+        secOrbitLine.visible =
+          false;
+
+
+        camera.position.set(
+          0,
+          10,
+          15
+        );
+      }
+
+
       controls.update();
     }
 
-    // Controls Event Listeners
-    document.getElementById("btn-play").addEventListener("click", () => {
-      isPaused = !isPaused;
-      document.getElementById("btn-play").innerText = isPaused ? "▶ PLAY" : "⏸ PAUSE";
-      document.getElementById("hud-engine-status").innerText = isPaused ? "PAUSED" : "ACTIVE RUNNING";
-      document.getElementById("hud-engine-status").style.color = isPaused ? "#f59e0b" : "#10b981";
-    });
 
-    document.getElementById("btn-reset").addEventListener("click", resetSimulation);
+    // ============================================================
+    // BUTTON CONTROLS
+    // ============================================================
 
-    document.querySelectorAll("[data-speed]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-speed]").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        speed = parseInt(btn.getAttribute("data-speed"));
-        document.getElementById("speed-label").innerText = `${speed}x SPEED`;
+    document
+      .getElementById("btn-play")
+      .addEventListener(
+        "click",
+        () => {
+
+          isPaused =
+            !isPaused;
+
+
+          document.getElementById(
+            "btn-play"
+          ).innerText =
+            isPaused
+              ? "▶ PLAY"
+              : "⏸ PAUSE";
+
+
+          document.getElementById(
+            "hud-engine-status"
+          ).innerText =
+            isPaused
+              ? "PAUSED"
+              : "ACTIVE RUNNING";
+
+
+          document.getElementById(
+            "hud-engine-status"
+          ).style.color =
+            isPaused
+              ? "#f59e0b"
+              : "#10b981";
+        }
+      );
+
+
+    document
+      .getElementById("btn-reset")
+      .addEventListener(
+        "click",
+        resetSimulation
+      );
+
+
+    document
+      .querySelectorAll(
+        "[data-speed]"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            document
+              .querySelectorAll(
+                "[data-speed]"
+              )
+              .forEach(
+                b =>
+                  b.classList.remove(
+                    "active"
+                  )
+              );
+
+
+            button.classList.add(
+              "active"
+            );
+
+
+            speed =
+              parseInt(
+                button.getAttribute(
+                  "data-speed"
+                )
+              );
+
+
+            document.getElementById(
+              "speed-label"
+            ).innerText =
+              `${speed}x SPEED`;
+          }
+        );
       });
-    });
 
-    document.getElementById("btn-mode-real").addEventListener("click", () => setMode("real"));
-    document.getElementById("btn-mode-synthetic").addEventListener("click", () => setMode("synthetic"));
+
+    document
+      .getElementById(
+        "btn-mode-real"
+      )
+      .addEventListener(
+        "click",
+        () =>
+          setMode("real")
+      );
+
+
+    document
+      .getElementById(
+        "btn-mode-synthetic"
+      )
+      .addEventListener(
+        "click",
+        () =>
+          setMode("synthetic")
+      );
+
+
+    // ============================================================
+    // WINDOW RESIZE
+    // ============================================================
 
     function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
+
+      camera.aspect =
+        window.innerWidth /
+        window.innerHeight;
+
+
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+
+
+      renderer.setSize(
+        window.innerWidth,
+        window.innerHeight
+      );
     }
 
-    // Animation Loop
-    let lastTime = performance.now();
+
+    // ============================================================
+    // ANIMATION LOOP
+    // ============================================================
+
+    let lastTime =
+      performance.now();
+
+
     function animate() {
-      requestAnimationFrame(animate);
-      const now = performance.now();
-      const dt = (now - lastTime) / 1000;
+
+      requestAnimationFrame(
+        animate
+      );
+
+
+      const now =
+        performance.now();
+
+
+      const dt =
+        Math.min(
+          (now - lastTime) / 1000,
+          0.1
+        );
+
+
       lastTime = now;
 
-      // Slow earth rotation
-      earthMesh.rotation.y += 0.0005;
+
+      // Slow Earth rotation
+
+      earthMesh.rotation.y +=
+        0.0005;
+
 
       updateSimulation(dt);
+
+
       controls.update();
-      renderer.render(scene, camera);
+
+
+      renderer.render(
+        scene,
+        camera
+      );
     }
 
-    // Start
-    initThree();
-    animate();
+
+    // ============================================================
+    // START DASHBOARD
+    // ============================================================
+
+    async function startDashboard() {
+
+      try {
+
+        // Load actual Python/SGP4 output.
+
+        await loadRealOrbitalData();
+
+
+        // Load verified encounter analysis.
+
+        await loadEncounterAnalysis();
+
+
+        // Fallback if encounter CSV cannot be read.
+
+        if (
+          realCAD === null ||
+          realTCA === null
+        ) {
+
+          calculateFallbackSummary();
+        }
+
+
+        // Create Three.js scene.
+
+        initThree();
+
+
+        // Draw actual SGP4 trajectories.
+
+        updateRealTrajectoryLines();
+
+
+        // Start in verified real-data mode.
+
+        setMode("real");
+
+
+        animate();
+
+
+        console.log(
+          "D1 dashboard initialized."
+        );
+
+
+        console.log(
+          "SGP4 frames:",
+          realStates.length
+        );
+
+
+        console.log(
+          "CAD:",
+          realCAD,
+          "km"
+        );
+
+
+        console.log(
+          "TCA:",
+          realTCA
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Dashboard initialization failed:",
+          error
+        );
+
+
+        document.getElementById(
+          "mode-text"
+        ).innerText =
+          "DATA LOAD ERROR";
+
+
+        document.getElementById(
+          "mode-badge"
+        ).innerText =
+          "CHECK LOCAL SERVER";
+
+
+        document.getElementById(
+          "mode-badge"
+        ).style.borderColor =
+          "var(--accent-red)";
+
+
+        alert(
+
+          "Could not load the SGP4 CSV data.\n\n" +
+
+          "Run the dashboard from the repository using:\n" +
+
+          "python -m http.server 8000"
+
+        );
+      }
+    }
+
+
+    // ============================================================
+    // START
+    // ============================================================
+
+    startDashboard();
+
   </script>
 </body>
+
 </html>
