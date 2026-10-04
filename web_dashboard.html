@@ -1,23 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Satellite Collision Avoidance System — 3D Operations Dashboard</title>
+  <title>Satellite Collision Avoidance System — 3D Operations & Trajectory Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-space: #070a13;
-      --panel-bg: rgba(15, 23, 42, 0.85);
-      --panel-border: rgba(56, 189, 248, 0.25);
+      --bg-space: #050811;
+      --panel-bg: rgba(10, 16, 32, 0.88);
+      --panel-border: rgba(56, 189, 248, 0.22);
+      --panel-border-focus: rgba(0, 240, 255, 0.6);
       --accent-cyan: #00f0ff;
       --accent-blue: #38bdf8;
-      --accent-coral: #f43f5e;
+      --accent-coral: #fb7185;
       --accent-green: #10b981;
       --accent-amber: #f59e0b;
       --accent-red: #ef4444;
+      --accent-purple: #c084fc;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --glass-glow: 0 8px 32px 0 rgba(0, 240, 255, 0.08);
     }
 
     * {
@@ -30,7 +36,7 @@
     body {
       background-color: var(--bg-space);
       color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       overflow: hidden;
       height: 100vh;
       width: 100vw;
@@ -57,7 +63,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 16px 20px;
+      padding: 14px 18px;
     }
 
     .interactive {
@@ -70,15 +76,17 @@
       justify-content: space-between;
       align-items: center;
       background: var(--panel-bg);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--panel-border);
       border-radius: 12px;
-      padding: 12px 24px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      padding: 10px 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--glass-glow);
     }
 
     .title-group h1 {
-      font-size: 1.15rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: 1.5px;
       color: #fff;
@@ -89,2584 +97,2235 @@
 
     .title-group h1 span {
       color: var(--accent-cyan);
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
     }
 
     .subtitle {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
       letter-spacing: 0.8px;
+      margin-top: 2px;
     }
 
-    .mode-indicator {
+    .header-center-stats {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .stat-pill {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+
+    .stat-pill .label {
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .stat-pill .value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .header-actions {
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
     }
 
-    .mode-badge {
-      padding: 4px 12px;
-      border-radius: 9999px;
-      background: rgba(2, 132, 199, 0.25);
-      border: 1px solid var(--accent-blue);
-      color: var(--accent-cyan);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    /* Center Main Grid (3D View + HUD) */
-    .main-content {
-      display: flex;
-      justify-content: flex-end;
-      flex: 1;
-      margin: 16px 0;
-      pointer-events: none;
-    }
-
-    /* HUD Telemetry Sidebar */
-    .hud-panel {
-      width: 380px;
-      background: var(--panel-bg);
-      backdrop-filter: blur(16px);
+    .btn {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text-main);
       border: 1px solid var(--panel-border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      overflow-y: auto;
-      max-height: calc(100vh - 170px);
-    }
-
-    .section-title {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: var(--accent-blue);
-      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
-      padding-bottom: 4px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .telemetry-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.82rem;
-      line-height: 1.5;
-    }
-
-    .telemetry-label {
-      color: var(--text-muted);
-    }
-
-    .telemetry-val {
-      font-family: ui-monospace, "Cascadia Code", monospace;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 0.78rem;
       font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 240, 255, 0.25);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(56, 189, 248, 0.15));
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.4), rgba(56, 189, 248, 0.3));
+      color: #fff;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: var(--accent-coral);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+      border-color: var(--accent-red);
       color: #fff;
     }
 
-    .object-card {
-      background: rgba(30, 41, 59, 0.5);
+    .btn-group {
+      display: flex;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--panel-border);
       border-radius: 8px;
-      padding: 10px 12px;
-      border-left: 3px solid var(--accent-cyan);
+      overflow: hidden;
     }
 
-    .object-card.secondary {
-      border-left-color: var(--accent-coral);
+    .btn-group .btn {
+      border: none;
+      border-radius: 0;
+      border-right: 1px solid rgba(56, 189, 248, 0.15);
     }
 
-    .status-banner {
-      padding: 12px;
-      border-radius: 10px;
-      text-align: center;
-      font-size: 0.95rem;
-      font-weight: 800;
-      letter-spacing: 1.2px;
-      background: rgba(16, 185, 129, 0.2);
-      border: 1px solid var(--accent-green);
-      color: var(--accent-green);
-      transition: all 0.3s ease;
+    .btn-group .btn:last-child {
+      border-right: none;
     }
 
-    .status-banner.monitor {
-      background: rgba(245, 158, 11, 0.2);
-      border-color: var(--accent-amber);
-      color: var(--accent-amber);
+    .btn-group .btn.active {
+      background: rgba(56, 189, 248, 0.25);
+      color: var(--accent-cyan);
     }
 
-    .status-banner.close-approach {
-      background: rgba(239, 68, 68, 0.25);
-      border-color: var(--accent-red);
-      color: var(--accent-red);
-      animation: pulse 1s infinite alternate;
-    }
-
-    @keyframes pulse {
-      from {
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-      }
-
-      to {
-        box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
-      }
-    }
-
-    .alarm-box {
-      display: none;
-      padding: 10px;
-      border-radius: 8px;
-      background: rgba(220, 38, 38, 0.15);
-      border: 1px dashed var(--accent-red);
-      font-size: 0.75rem;
-      color: #fca5a5;
-      line-height: 1.4;
-    }
-
-    /* Bottom Control Bar */
-    footer {
+    /* Main Dashboard Layout */
+    .dashboard-body {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      background: var(--panel-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 10px 20px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      height: calc(100vh - 150px);
+      margin-top: 10px;
       gap: 16px;
     }
 
-    .btn-group {
+    .side-panel {
+      width: 340px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    .panel-header h2 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-main);
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .btn {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #f8fafc;
+    .panel-header h2 span {
+      color: var(--accent-cyan);
+    }
+
+    .panel-content {
+      padding: 14px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-content::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .panel-content::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.2);
+      border-radius: 4px;
+    }
+
+    /* Object Catalog List */
+    .catalog-filters {
+      display: flex;
+      gap: 4px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 6px;
+      padding: 3px;
+      border: 1px solid rgba(56, 189, 248, 0.15);
+    }
+
+    .catalog-filters button {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      padding: 5px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .catalog-filters button.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent-cyan);
+    }
+
+    .object-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .object-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.12);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+
+    .object-item:hover {
+      background: rgba(30, 41, 59, 0.7);
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateX(2px);
+    }
+
+    .object-item.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.08);
+      box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.1);
+    }
+
+    .object-item.primary {
+      border-color: rgba(0, 240, 255, 0.5);
+      background: rgba(0, 240, 255, 0.05);
+    }
+
+    .object-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .object-name {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .object-color-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .object-badge {
+      font-size: 0.62rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .badge-primary {
+      background: rgba(0, 240, 255, 0.2);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+    }
+
+    .badge-payload {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-blue);
+    }
+
+    .badge-debris {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-coral);
+    }
+
+    .badge-custom {
+      background: rgba(192, 132, 252, 0.15);
+      color: var(--accent-purple);
+    }
+
+    .object-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .object-stats span {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .object-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .object-actions button {
+      flex: 1;
+      padding: 4px 6px;
+      font-size: 0.65rem;
+      border-radius: 4px;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .object-actions button:hover {
+      background: rgba(56, 189, 248, 0.2);
+      color: #fff;
+    }
+
+    /* Right Telemetry Panel */
+    .telemetry-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .telemetry-card-title {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .telemetry-box {
+      background: rgba(10, 16, 32, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.08);
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .telemetry-box .label {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .telemetry-box .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    /* Proximity Alarm Card */
+    .alarm-card {
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .alarm-card.safe {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .alarm-card.monitor {
+      background: rgba(245, 158, 11, 0.08);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    .alarm-card.close {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--accent-red);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+      animation: pulseAlert 1.5s infinite;
+    }
+
+    @keyframes pulseAlert {
+      0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+      50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
+    }
+
+    .alarm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .alarm-status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .alarm-status-badge.safe {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .alarm-status-badge.monitor {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .alarm-status-badge.close {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fff;
+      border: 1px solid var(--accent-red);
+    }
+
+    .distance-display {
+      text-align: center;
+      padding: 6px 0;
+    }
+
+    .distance-display .dist-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .distance-display .dist-unit {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    /* Bottom Control Center */
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), var(--glass-glow);
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .camera-presets {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .camera-presets span {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    /* Trajectory Studio Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-container {
+      width: 680px;
+      max-width: 95vw;
+      max-height: 90vh;
+      background: #0b1329;
+      border: 1px solid var(--panel-border-focus);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 240, 255, 0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalSlideUp {
+      from { transform: translateY(20px) scale(0.97); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 16px 22px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .modal-header h3 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-header h3 span {
+      color: var(--accent-cyan);
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-coral);
+    }
+
+    .modal-tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+      padding: 0 16px;
+    }
+
+    .modal-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: 'Chakra Petch', sans-serif;
       font-size: 0.8rem;
       font-weight: 600;
-      padding: 8px 14px;
-      border-radius: 8px;
+      letter-spacing: 0.5px;
+      padding: 12px 16px;
       cursor: pointer;
-      transition: all 0.2s;
+      position: relative;
+      transition: all 0.2s ease;
     }
 
-    .btn:hover {
-      background: #334155;
-      border-color: var(--accent-blue);
+    .modal-tab-btn:hover {
       color: #fff;
     }
 
-    .btn.active {
-      background: #0284c7;
-      border-color: var(--accent-cyan);
-      color: #fff;
+    .modal-tab-btn.active {
+      color: var(--accent-cyan);
     }
 
-    .btn.danger {
-      background: rgba(220, 38, 38, 0.2);
-      border-color: var(--accent-red);
-      color: #fca5a5;
+    .modal-tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
     }
 
-    .btn.danger.active {
-      background: #dc2626;
-      color: #fff;
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
     }
 
-    .camera-hints {
-      font-size: 0.72rem;
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 600;
       color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label .slider-val {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+    }
+
+    input[type="text"], input[type="number"], select, textarea {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .preset-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .preset-card:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 240, 255, 0.15);
+    }
+
+    .preset-card h4 {
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preset-desc {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      line-height: 1.3;
+    }
+
+    .modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid rgba(56, 189, 248, 0.15);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    /* Notifications Toast */
+    .toast-container {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: toastSlideIn 0.3s ease;
+    }
+
+    @keyframes toastSlideIn {
+      from { transform: translateX(50px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
   </style>
 </head>
-
 <body>
 
-  <!-- WebGL 3D Canvas -->
+  <!-- WebGL Render Canvas -->
   <canvas id="webgl-canvas"></canvas>
+
+  <!-- Notification Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
 
   <!-- UI Overlay -->
   <div class="ui-layer">
-    <!-- Header -->
+    
+    <!-- Top Header -->
     <header class="interactive">
       <div class="title-group">
-        <h1><span>✦</span> SATELLITE COLLISION AVOIDANCE SYSTEM</h1>
-        <div class="subtitle">3D Conjunction Assessment & Proximity Visualization — D1</div>
+        <h1><span>SATELLITE COLLISION AVOIDANCE</span> // OPERATIONS CONSOLE</h1>
+        <div class="subtitle">ORBITAL CONJUNCTION ASSESSMENT & REAL-TIME TRAJECTORY STUDIO</div>
       </div>
-      <div class="mode-indicator">
-        <span id="mode-text">REAL TRACKED DATA</span>
-        <div class="mode-badge" id="mode-badge">OPERATIONAL</div>
+
+      <div class="header-center-stats">
+        <div class="stat-pill">
+          <span class="label">UTC SIM TIME:</span>
+          <span class="value" id="sim-utc-time">2026-09-29 03:44:40</span>
+        </div>
+        <div class="stat-pill">
+          <span class="label">TRACKED OBJECTS:</span>
+          <span class="value" id="tracked-count">10</span>
+        </div>
+        <div class="stat-pill">
+          <span class="label">PRIMARY ASSET:</span>
+          <span class="value" style="color: var(--accent-cyan);">CARTOSAT-3</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-primary" id="btn-open-studio">
+          ✨ + ADD / EDIT TRAJECTORY
+        </button>
+        <button class="btn btn-danger" id="btn-trigger-synthetic">
+          🚨 SYNTHETIC TEST ENCOUNTER
+        </button>
       </div>
     </header>
 
-    <!-- Main Content (Right HUD) -->
-    <div class="main-content">
-      <div class="hud-panel interactive">
+    <!-- Main Dashboard Panels -->
+    <div class="dashboard-body">
+      
+      <!-- Left Panel: Space Catalog -->
+      <div class="side-panel interactive">
+        <div class="panel-header">
+          <h2><span>TRACKED</span> SPACE CATALOG</h2>
+          <span style="font-size: 0.72rem; color: var(--accent-cyan);" id="catalog-count-label">10 Objects</span>
+        </div>
+        
+        <div class="panel-content">
+          <div class="catalog-filters">
+            <button class="active" data-filter="all">ALL</button>
+            <button data-filter="payload">PAYLOADS</button>
+            <button data-filter="debris">DEBRIS</button>
+            <button data-filter="custom">CUSTOM</button>
+          </div>
 
-        <!-- Simulation Clock -->
-        <div>
-          <div class="section-title">
-            <span>Simulation Clock & Engine</span>
-            <span id="speed-label">60x SPEED</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Epoch Time:</span>
-            <span class="telemetry-val" id="hud-time">2026-09-29 03:44:40 UTC</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Status:</span>
-            <span class="telemetry-val" id="hud-engine-status" style="color: var(--accent-green);">ACTIVE RUNNING</span>
+          <div class="object-list" id="object-list-container">
+            <!-- Dynamically populated objects -->
           </div>
         </div>
-
-        <!-- Primary Object -->
-        <div class="object-card">
-          <div class="section-title" style="color: var(--accent-cyan);">
-            <span id="primary-name">CARTOSAT-3 (NORAD 44804)</span>
-            <span>PRIMARY</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Altitude:</span>
-            <span class="telemetry-val" id="cartosat-alt">524.45 km</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Velocity:</span>
-            <span class="telemetry-val" id="cartosat-spd">7.592 km/s</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Position [X,Y,Z]:</span>
-            <span class="telemetry-val" id="cartosat-pos">[6063.9, -3252.0, 448.1]</span>
-          </div>
-        </div>
-
-        <!-- Secondary Object -->
-        <div class="object-card secondary">
-          <div class="section-title" style="color: var(--accent-coral);">
-            <span id="secondary-name">PSLV R/B (NORAD 44805)</span>
-            <span>SECONDARY</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Altitude:</span>
-            <span class="telemetry-val" id="pslv-alt">373.15 km</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Velocity:</span>
-            <span class="telemetry-val" id="pslv-spd">7.678 km/s</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Position [X,Y,Z]:</span>
-            <span class="telemetry-val" id="pslv-pos">[4610.6, -4945.8, 0.0]</span>
-          </div>
-        </div>
-
-        <!-- Conjunction Analysis -->
-        <div>
-          <div class="section-title">
-            <span>Conjunction Telemetry (Shared Engine)</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">3D Separation:</span>
-            <span class="telemetry-val" id="enc-dist" style="color: var(--accent-cyan); font-size: 0.95rem;">10,480.22
-              km</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Relative Speed:</span>
-            <span class="telemetry-val" id="enc-rel-spd">11.818 km/s</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Closing Speed:</span>
-            <span class="telemetry-val" id="enc-close-spd">0.000 km/s</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Approach Angle:</span>
-            <span class="telemetry-val" id="enc-angle">0.00°</span>
-          </div>
-        </div>
-
-        <!-- CAD & TCA -->
-        <div>
-          <div class="section-title">
-            <span>Closest Approach Prediction</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Observed CAD:</span>
-            <span class="telemetry-val" id="hud-cad">10,462.28 km</span>
-          </div>
-          <div class="telemetry-row">
-            <span class="telemetry-label">Calculated TCA:</span>
-            <span class="telemetry-val" id="hud-tca">03:50:40 UTC</span>
-          </div>
-        </div>
-
-        <!-- Status Badge -->
-        <div class="status-banner" id="status-badge">
-          STATUS: SAFE [LOW]
-        </div>
-
-        <!-- Persistent Alarm Box (Task 4) -->
-        <div class="alarm-box" id="alarm-box">
-          <strong>⚠ HIGH PROXIMITY EVENT PERSISTED</strong><br>
-          Minimum CAD: <span id="alarm-cad">5.00 km</span> at TCA: <span id="alarm-tca">T+ 200s</span><br>
-          Threshold Violated: Close Approach (&lt;10 km)
-        </div>
-
       </div>
+
+      <!-- Right Panel: Conjunction Assessment & Telemetry -->
+      <div class="side-panel interactive" style="width: 380px;">
+        <div class="panel-header">
+          <h2><span>CONJUNCTION</span> ASSESSMENT</h2>
+          <span class="alarm-status-badge safe" id="primary-alarm-badge">SAFE [LOW]</span>
+        </div>
+
+        <div class="panel-content">
+          
+          <!-- Live Encounter Proximity Card -->
+          <div class="alarm-card safe" id="alarm-card">
+            <div class="alarm-header">
+              <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">SEPARATION DISTANCE</span>
+              <span style="font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;" id="target-name-header">TARGET: PSLV R/B</span>
+            </div>
+            
+            <div class="distance-display">
+              <span class="dist-value" id="live-distance">10,480.22</span>
+              <span class="dist-unit">KM</span>
+            </div>
+
+            <div class="telemetry-grid">
+              <div class="telemetry-box">
+                <span class="label">RELATIVE SPEED</span>
+                <span class="value" id="live-rel-speed">11.818 km/s</span>
+              </div>
+              <div class="telemetry-box">
+                <span class="label">CLOSING SPEED</span>
+                <span class="value" id="live-closing-speed">-0.542 km/s</span>
+              </div>
+              <div class="telemetry-box">
+                <span class="label">APPROACH ANGLE</span>
+                <span class="value" id="live-approach-angle">92.4°</span>
+              </div>
+              <div class="telemetry-box">
+                <span class="label">CLOSEST APPROACH (CAD)</span>
+                <span class="value" id="live-cad" style="color: var(--accent-cyan);">10,462.28 km</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Primary Asset Telemetry -->
+          <div class="telemetry-card">
+            <div class="telemetry-card-title">
+              <span>PRIMARY: CARTOSAT-3</span>
+              <span style="color: var(--text-dim); font-size: 0.65rem;">NORAD 44804</span>
+            </div>
+            <div class="telemetry-grid">
+              <div class="telemetry-box">
+                <span class="label">ALTITUDE</span>
+                <span class="value" id="pri-alt">524.4 km</span>
+              </div>
+              <div class="telemetry-box">
+                <span class="label">ORBITAL SPEED</span>
+                <span class="value" id="pri-spd">7.60 km/s</span>
+              </div>
+              <div class="telemetry-box" style="grid-column: span 2;">
+                <span class="label">ECI POSITION [X, Y, Z] km</span>
+                <span class="value" id="pri-pos" style="font-size: 0.75rem;">[6063.9, -3252.0, 448.1]</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Telemetry -->
+          <div class="telemetry-card">
+            <div class="telemetry-card-title">
+              <span id="sec-card-name">TARGET: PSLV R/B</span>
+              <span style="color: var(--text-dim); font-size: 0.65rem;" id="sec-card-norad">NORAD 44805</span>
+            </div>
+            <div class="telemetry-grid">
+              <div class="telemetry-box">
+                <span class="label">ALTITUDE</span>
+                <span class="value" id="sec-alt">373.1 km</span>
+              </div>
+              <div class="telemetry-box">
+                <span class="label">ORBITAL SPEED</span>
+                <span class="value" id="sec-spd">7.69 km/s</span>
+              </div>
+              <div class="telemetry-box" style="grid-column: span 2;">
+                <span class="label">ECI POSITION [X, Y, Z] km</span>
+                <span class="value" id="sec-pos" style="font-size: 0.75rem;">[-1295.0, 167.0, 6616.0]</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action Maneuver Button -->
+          <button class="btn btn-primary" id="btn-quick-maneuver" style="justify-content: center; padding: 10px;">
+            🚀 PLAN COLLISION AVOIDANCE MANEUVER (ΔV)
+          </button>
+
+        </div>
+      </div>
+
     </div>
 
-    <!-- Controls Footer -->
+    <!-- Bottom Controls Footer -->
     <footer class="interactive">
-      <div class="btn-group">
-        <button class="btn" id="btn-play">⏸ PAUSE</button>
+      <div class="playback-controls">
+        <button class="btn" id="btn-play-pause">⏸ PAUSE</button>
         <button class="btn" id="btn-reset">↺ RESET</button>
+        
+        <div class="btn-group" id="warp-speed-group">
+          <button class="btn" data-speed="1">1x</button>
+          <button class="btn" data-speed="10">10x</button>
+          <button class="btn active" data-speed="60">60x</button>
+          <button class="btn" data-speed="300">300x</button>
+          <button class="btn" data-speed="1000">1000x</button>
+        </div>
       </div>
 
-      <div class="btn-group">
-        <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 4px;">WARP:</span>
-        <button class="btn" data-speed="1">1x</button>
-        <button class="btn" data-speed="10">10x</button>
-        <button class="btn active" data-speed="60">60x</button>
-        <button class="btn" data-speed="300">300x</button>
+      <div class="camera-presets">
+        <span>CAMERA:</span>
+        <button class="btn" id="cam-free">FREE</button>
+        <button class="btn" id="cam-iso">ISOMETRIC</button>
+        <button class="btn" id="cam-polar">POLAR</button>
+        <button class="btn" id="cam-primary">CHASE CARTOSAT</button>
+        <button class="btn" id="cam-conjunction">CONJUNCTION VIEW</button>
       </div>
 
-      <div class="btn-group">
-        <button class="btn active" id="btn-mode-real">🛰 REAL DATA MODE</button>
-        <button class="btn danger" id="btn-mode-synthetic">🎯 SYNTHETIC TEST (5km Close Approach)</button>
-      </div>
-
-      <div class="camera-hints">
-        🖱 Left-drag to rotate | Right-drag / Wheel to zoom
+      <div style="font-size: 0.72rem; color: var(--text-dim);">
+        MOUSE: Left-drag to rotate | Right-drag / Scroll to zoom
       </div>
     </footer>
+
   </div>
 
-  <!-- Three.js Library via CDN -->
+  <!-- Trajectory Studio Modal -->
+  <div class="modal-overlay" id="studio-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3><span>TRAJECTORY STUDIO</span> // ADD & EDIT ORBITS</h3>
+        <button class="modal-close-btn" id="btn-modal-close">&times;</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-tab="tab-keplerian">KEPLERIAN ELEMENTS</button>
+        <button class="modal-tab-btn" data-tab="tab-presets">CURATED PRESETS</button>
+        <button class="modal-tab-btn" data-tab="tab-tle">TLE INPUT</button>
+        <button class="modal-tab-btn" data-tab="tab-maneuver">MANEUVER BURN (ΔV)</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Tab 1: Keplerian Elements -->
+        <div class="tab-content active" id="tab-keplerian">
+          <div class="form-row">
+            <div class="form-group">
+              <label>OBJECT NAME</label>
+              <input type="text" id="kep-name" value="STAR-PROBE-1">
+            </div>
+            <div class="form-group">
+              <label>OBJECT TYPE</label>
+              <select id="kep-type">
+                <option value="payload">Operational Satellite</option>
+                <option value="debris">Space Debris / Fragment</option>
+                <option value="rocket_body">Rocket Body (R/B)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>ORBIT COLOR</label>
+              <input type="color" id="kep-color" value="#00ffcc" style="height: 38px; padding: 2px; width: 100%;">
+            </div>
+            <div class="form-group">
+              <label>ALTITUDE (km) <span class="slider-val" id="lbl-kep-alt">550 km</span></label>
+              <input type="range" id="kep-alt" min="200" max="2000" step="10" value="550">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>INCLINATION (deg) <span class="slider-val" id="lbl-kep-inc">53.0°</span></label>
+              <input type="range" id="kep-inc" min="0" max="180" step="0.5" value="53">
+            </div>
+            <div class="form-group">
+              <label>ECCENTRICITY <span class="slider-val" id="lbl-kep-ecc">0.001</span></label>
+              <input type="range" id="kep-ecc" min="0" max="0.2" step="0.001" value="0.001">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>RAAN / LONGITUDE OF ASC. NODE (deg) <span class="slider-val" id="lbl-kep-raan">120.0°</span></label>
+              <input type="range" id="kep-raan" min="0" max="360" step="1" value="120">
+            </div>
+            <div class="form-group">
+              <label>ARGUMENT OF PERIGEE (deg) <span class="slider-val" id="lbl-kep-argp">90.0°</span></label>
+              <input type="range" id="kep-argp" min="0" max="360" step="1" value="90">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>INITIAL MEAN ANOMALY (deg) <span class="slider-val" id="lbl-kep-ma">45.0°</span></label>
+            <input type="range" id="kep-ma" min="0" max="360" step="1" value="45">
+          </div>
+        </div>
+
+        <!-- Tab 2: Curated Presets -->
+        <div class="tab-content" id="tab-presets">
+          <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 8px;">Select a real orbital object or test threat to instantly deploy into the 3D space environment:</p>
+          <div class="preset-grid">
+            <div class="preset-card" onclick="deployPreset('iss')">
+              <h4>ISS (Space Station) <span style="color: var(--accent-green);">LEO</span></h4>
+              <div class="preset-desc">Alt: 420 km | Inc: 51.6° | Heaviest human space habitat</div>
+            </div>
+            <div class="preset-card" onclick="deployPreset('starlink')">
+              <h4>Starlink Constellation <span style="color: var(--accent-blue);">SHELL</span></h4>
+              <div class="preset-desc">Alt: 550 km | Inc: 53.0° | Mega-constellation broadband sat</div>
+            </div>
+            <div class="preset-card" onclick="deployPreset('fengyun')">
+              <h4>Fengyun-1C Debris <span style="color: var(--accent-coral);">THREAT</span></h4>
+              <div class="preset-desc">Alt: 850 km | Inc: 98.7° | High-velocity fragmentation fragment</div>
+            </div>
+            <div class="preset-card" onclick="deployPreset('cosmos')">
+              <h4>Cosmos 1408 Debris <span style="color: var(--accent-coral);">THREAT</span></h4>
+              <div class="preset-desc">Alt: 470 km | Inc: 82.5° | ASAT test orbital debris track</div>
+            </div>
+            <div class="preset-card" onclick="deployPreset('near_miss')">
+              <h4>Controlled Close Threat <span style="color: var(--accent-red);">CRITICAL</span></h4>
+              <div class="preset-desc">Alt: 524 km | Inc: 97.4° | Engineered 6.2 km close encounter to CARTOSAT-3</div>
+            </div>
+            <div class="preset-card" onclick="deployPreset('polar')">
+              <h4>Polar Earth Observation <span style="color: var(--accent-cyan);">SSO</span></h4>
+              <div class="preset-desc">Alt: 680 km | Inc: 98.2° | Sun-synchronous remote sensor</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: TLE Input -->
+        <div class="tab-content" id="tab-tle">
+          <div class="form-group">
+            <label>OBJECT IDENTIFIER / NAME</label>
+            <input type="text" id="tle-name" placeholder="e.g. NOAA-21">
+          </div>
+          <div class="form-group">
+            <label>PASTE 2-LINE OR 3-LINE TLE RECORD</label>
+            <textarea id="tle-text" rows="5" placeholder="1 25544U 98067A   26272.22894676  .00014761  00000+0  26679-3 0  9991&#10;2 25544  51.6418 198.5412 0005728 112.4357 247.7214 15.49842106474812"></textarea>
+          </div>
+          <div class="form-group">
+            <label>ORBIT DISPLAY COLOR</label>
+            <input type="color" id="tle-color" value="#ffb703" style="height: 38px; width: 100%;">
+          </div>
+        </div>
+
+        <!-- Tab 4: Maneuver Burn Simulation (ΔV) -->
+        <div class="tab-content" id="tab-maneuver">
+          <p style="font-size: 0.75rem; color: var(--text-dim);">Apply impulsive thrust ($\Delta V$) to alter orbital velocity, adjust altitude, and clear conjunction risks:</p>
+          
+          <div class="form-group">
+            <label>SELECT TARGET SATELLITE</label>
+            <select id="maneuver-target-select">
+              <option value="CARTOSAT-3">CARTOSAT-3 (Primary Asset)</option>
+            </select>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>ΔV PROGRADE (m/s) <span class="slider-val" id="lbl-burn-pro">0 m/s</span></label>
+              <input type="range" id="burn-pro" min="-50" max="50" step="1" value="0">
+            </div>
+            <div class="form-group">
+              <label>ΔV NORMAL (m/s) <span class="slider-val" id="lbl-burn-norm">0 m/s</span></label>
+              <input type="range" id="burn-norm" min="-30" max="30" step="1" value="0">
+            </div>
+            <div class="form-group">
+              <label>ΔV RADIAL (m/s) <span class="slider-val" id="lbl-burn-rad">0 m/s</span></label>
+              <input type="range" id="burn-rad" min="-30" max="30" step="1" value="0">
+            </div>
+          </div>
+
+          <div class="telemetry-card" style="background: rgba(15, 23, 42, 0.9);">
+            <div class="telemetry-card-title">PROJECTED ORBIT PERTURBATION</div>
+            <div class="telemetry-grid">
+              <div class="telemetry-box">
+                <span class="label">TOTAL BURN MAGNITUDE</span>
+                <span class="value" id="burn-total-mag" style="color: var(--accent-cyan);">0.0 m/s</span>
+              </div>
+              <div class="telemetry-box">
+                <span class="label">ESTIMATED APOGEE SHIFT</span>
+                <span class="value" id="burn-alt-shift">+0.0 km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn" id="btn-modal-cancel">CANCEL</button>
+        <button class="btn btn-primary" id="btn-modal-submit">🚀 DEPLOY TO SIMULATION</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js + OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
-    // ============================================================
-    // SATELLITE COLLISION AVOIDANCE SYSTEM — D1 DASHBOARD
-    // ============================================================
+    // =========================================================================
+    // SATELLITE COLLISION AVOIDANCE SYSTEM — ADVANCED ENGINE
+    // =========================================================================
 
-    const R_EARTH = 6371;              // km
-    const SCALE = 1 / 1000;            // 1 Three.js unit = 1000 km
+    const R_EARTH = 6371.0;            // Earth radius in km
+    const MU_EARTH = 398600.4418;      // Standard gravitational parameter km^3/s^2
+    const SCALE = 1.0 / 1000.0;        // 1 Three.js unit = 1000 km
     const EARTH_RADIUS_SCALED = R_EARTH * SCALE;
 
-    // Prototype thresholds from analysis_engine.py
     const SAFE_DISTANCE_KM = 100.0;
     const CLOSE_APPROACH_KM = 10.0;
 
-    // ------------------------------------------------------------
-    // Three.js objects
-    // ------------------------------------------------------------
+    // Simulation Global Clock & State
+    let simStartTime = new Date("2026-09-29T03:44:40Z").getTime();
+    let simCurrentTime = simStartTime;
+    let isPaused = false;
+    let warpMultiplier = 60; // 60x real-time default
+    let lastTimestamp = performance.now();
 
+    // Scene & Renderer State
     let scene, camera, renderer, controls;
-
-    let earthMesh;
-    let atmosphereMesh;
-
-    let satMesh;
-    let secMesh;
-
-    let satTrailGeom;
-    let secTrailGeom;
-
-    let satTrailLine;
-    let secTrailLine;
-
+    let earthMesh, atmosphereMesh;
     let conjunctionLine;
 
-    let satOrbitLine;
-    let secOrbitLine;
+    // Tracked Space Objects Map
+    // Key: Object Name -> Value: Object Definition + Three.js Meshes + State
+    const spaceObjects = new Map();
+    let primaryKey = "CARTOSAT-3";
+    let selectedSecondaryKey = "PSLV R/B";
 
+    // Camera Mode
+    let cameraMode = "free"; // "free", "isometric", "polar", "primary", "conjunction"
 
-    // ------------------------------------------------------------
-    // Dashboard state
-    // ------------------------------------------------------------
-
-    let mode = "real";
-    let isPaused = false;
-    let speed = 60;
-
-    let realStates = [];
-    let realFrameIndex = 0;
-    let realFrameAccumulator = 0;
-    let realDataReady = false;
-
-    let realCAD = null;
-    let realTCA = null;
-
-    let syntheticTimeSec = 0;
-
-    let cad_km = Infinity;
-    let tca_str = "Calculating...";
-
-    let closeApproachDetected = false;
-    let persistedRecord = null;
-
-    const satTrailPositions = [];
-    const secTrailPositions = [];
-
-    const MAX_TRAIL = 200;
-
-    const ORBITAL_DATA_PATH = "output/orbital_states.csv";
-    const ANALYSIS_DATA_PATH = "output/encounter_analysis.csv";
-
-
-    // ============================================================
-    // CSV LOADING
-    // ============================================================
-
-    function parseCSV(text) {
-
-      const lines = text
-        .trim()
-        .split(/\r?\n/)
-        .filter(line => line.trim().length > 0);
-
-      if (lines.length < 2) {
-        return [];
+    // =========================================================================
+    // BASELINE CURATED ORBITAL DATASET (PRE-LOADED)
+    // =========================================================================
+    const INITIAL_CATALOG = [
+      {
+        name: "CARTOSAT-3",
+        type: "payload",
+        isPrimary: true,
+        color: "#00f0ff",
+        sma: 6896.3, // ~525 km altitude
+        ecc: 0.0012,
+        inc: 97.42,
+        raan: 332.28,
+        argp: 145.96,
+        ma0: 214.24,
+        norad: "44804"
+      },
+      {
+        name: "PSLV R/B",
+        type: "rocket_body",
+        isPrimary: false,
+        color: "#fb7185",
+        sma: 6744.0, // ~373 km altitude
+        ecc: 0.0017,
+        inc: 97.16,
+        raan: 312.99,
+        argp: 75.26,
+        ma0: 285.06,
+        norad: "44805"
+      },
+      {
+        name: "ISS (ZARYA)",
+        type: "payload",
+        isPrimary: false,
+        color: "#10b981",
+        sma: 6791.0, // ~420 km altitude
+        ecc: 0.0006,
+        inc: 51.64,
+        raan: 198.54,
+        argp: 112.44,
+        ma0: 247.72,
+        norad: "25544"
+      },
+      {
+        name: "STARLINK-1007",
+        type: "payload",
+        isPrimary: false,
+        color: "#38bdf8",
+        sma: 6921.0, // ~550 km altitude
+        ecc: 0.0001,
+        inc: 53.05,
+        raan: 245.12,
+        argp: 88.54,
+        ma0: 271.58,
+        norad: "44713"
+      },
+      {
+        name: "TIANGONG (CSS)",
+        type: "payload",
+        isPrimary: false,
+        color: "#f59e0b",
+        sma: 6755.0, // ~384 km altitude
+        ecc: 0.0004,
+        inc: 41.47,
+        raan: 162.84,
+        argp: 135.21,
+        ma0: 224.91,
+        norad: "48274"
+      },
+      {
+        name: "FENGYUN 1C DEBRIS",
+        type: "debris",
+        isPrimary: false,
+        color: "#ef4444",
+        sma: 7220.0, // ~849 km altitude
+        ecc: 0.0085,
+        inc: 98.74,
+        raan: 45.13,
+        argp: 210.45,
+        ma0: 149.22,
+        norad: "30670"
+      },
+      {
+        name: "COSMOS 1408 DEBRIS",
+        type: "debris",
+        isPrimary: false,
+        color: "#e11d48",
+        sma: 6845.0, // ~474 km altitude
+        ecc: 0.0041,
+        inc: 82.54,
+        raan: 110.45,
+        argp: 315.85,
+        ma0: 44.13,
+        norad: "49863"
+      },
+      {
+        name: "HUBBLE TELESCOPE",
+        type: "payload",
+        isPrimary: false,
+        color: "#c084fc",
+        sma: 6911.0, // ~540 km altitude
+        ecc: 0.0003,
+        inc: 28.47,
+        raan: 285.45,
+        argp: 295.41,
+        ma0: 64.58,
+        norad: "20580"
+      },
+      {
+        name: "NOAA 20 (JPSS-1)",
+        type: "payload",
+        isPrimary: false,
+        color: "#67e8f9",
+        sma: 7195.0, // ~824 km altitude
+        ecc: 0.0001,
+        inc: 98.71,
+        raan: 180.45,
+        argp: 78.45,
+        ma0: 281.67,
+        norad: "43013"
+      },
+      {
+        name: "CZ-2C R/B",
+        type: "rocket_body",
+        isPrimary: false,
+        color: "#f97316",
+        sma: 6890.0, // ~519 km altitude
+        ecc: 0.0038,
+        inc: 63.45,
+        raan: 320.15,
+        argp: 165.41,
+        ma0: 194.85,
+        norad: "43828"
       }
+    ];
 
-      const headers = lines[0]
-        .split(",")
-        .map(h => h.trim());
+    // =========================================================================
+    // KEPLERIAN ORBITAL MECHANICS PROPAGATOR (HIGH PRECISION J2/KEPLER)
+    // =========================================================================
 
-      return lines.slice(1).map(line => {
-
-        const values = line.split(",");
-        const row = {};
-
-        headers.forEach((header, index) => {
-          row[header] =
-            values[index] !== undefined
-              ? values[index].trim()
-              : "";
-        });
-
-        return row;
-      });
-    }
-
-
-    // ============================================================
-    // LOAD VERIFIED SGP4 OUTPUT
-    // ============================================================
-
-    async function loadRealOrbitalData() {
-
-      const response = await fetch(ORBITAL_DATA_PATH);
-
-      if (!response.ok) {
-        throw new Error(
-          `Could not load ${ORBITAL_DATA_PATH} (${response.status})`
-        );
+    function solveKepler(M, e) {
+      // Newton-Raphson solver for Kepler's Equation: M = E - e*sin(E)
+      let E = M;
+      for (let iter = 0; iter < 10; iter++) {
+        const delta = (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
+        E -= delta;
+        if (Math.abs(delta) < 1e-7) break;
       }
-
-      const csvText = await response.text();
-
-      const rows = parseCSV(csvText);
-
-      const grouped = {};
-
-
-      rows.forEach(row => {
-
-        const time = row.time;
-
-        if (!grouped[time]) {
-          grouped[time] = {};
-        }
-
-        grouped[time][row.object] = {
-
-          time: time,
-
-          x: Number(row.x_km),
-          y: Number(row.y_km),
-          z: Number(row.z_km),
-
-          vx: Number(row.vx_km_s),
-          vy: Number(row.vy_km_s),
-          vz: Number(row.vz_km_s)
-        };
-      });
-
-
-      realStates = Object.keys(grouped)
-        .sort()
-        .map(time => ({
-
-          time: time,
-
-          cartosat:
-            grouped[time]["CARTOSAT-3"],
-
-          pslv:
-            grouped[time]["PSLV R/B"]
-
-        }))
-        .filter(frame =>
-          frame.cartosat &&
-          frame.pslv
-        );
-
-
-      if (realStates.length === 0) {
-
-        throw new Error(
-          "No synchronized CARTOSAT-3 / PSLV R/B states found."
-        );
-      }
-
-
-      realDataReady = true;
-
-      realFrameIndex = 0;
-      realFrameAccumulator = 0;
-
-
-      console.log(
-        `Loaded ${realStates.length} synchronized SGP4 frames.`
-      );
-
-      console.log(
-        "First SGP4 frame:",
-        realStates[0]
-      );
-
-      console.log(
-        "Last SGP4 frame:",
-        realStates[realStates.length - 1]
-      );
+      return E;
     }
 
-
-    // ============================================================
-    // LOAD VERIFIED ENCOUNTER ANALYSIS
-    // ============================================================
-
-    async function loadEncounterAnalysis() {
-
-      try {
-
-        const response =
-          await fetch(ANALYSIS_DATA_PATH);
-
-        if (!response.ok) {
-
-          console.warn(
-            `Could not load ${ANALYSIS_DATA_PATH}`
-          );
-
-          return;
-        }
-
-
-        const rows =
-          parseCSV(await response.text());
-
-
-        const distanceRows = rows
-          .map(row => ({
-
-            time: row.time,
-
-            distance:
-              Number(row.distance_km)
-
-          }))
-          .filter(row =>
-            Number.isFinite(row.distance)
-          );
-
-
-        if (!distanceRows.length) {
-          return;
-        }
-
-
-        const closest =
-          distanceRows.reduce(
-            (minimum, current) =>
-              current.distance < minimum.distance
-                ? current
-                : minimum
-          );
-
-
-        realCAD = closest.distance;
-
-        realTCA = closest.time;
-
-
-        console.log(
-          `Verified CAD: ${realCAD.toFixed(2)} km`
-        );
-
-        console.log(
-          `Verified TCA: ${realTCA}`
-        );
-
-      } catch (error) {
-
-        console.warn(
-          "Encounter analysis could not be loaded:",
-          error
-        );
-      }
-    }
-
-
-    // ============================================================
-    // FALLBACK CAD CALCULATION
-    // ============================================================
-
-    function calculateFallbackSummary() {
-
-      if (!realStates.length) {
-        return;
-      }
-
-
-      let closest = {
-
-        distance: Infinity,
-
-        time: realStates[0].time
-
-      };
-
-
-      realStates.forEach(frame => {
-
-        const dx =
-          frame.cartosat.x -
-          frame.pslv.x;
-
-        const dy =
-          frame.cartosat.y -
-          frame.pslv.y;
-
-        const dz =
-          frame.cartosat.z -
-          frame.pslv.z;
-
-
-        const distance =
-          Math.sqrt(
-            dx * dx +
-            dy * dy +
-            dz * dz
-          );
-
-
-        if (distance < closest.distance) {
-
-          closest = {
-
-            distance: distance,
-
-            time: frame.time
-
-          };
-        }
-      });
-
-
-      realCAD = closest.distance;
-
-      realTCA = closest.time;
-    }
-
-
-    // ============================================================
-    // TIME FORMATTING
-    // ============================================================
-
-    function formatUtcTime(timestamp) {
-
-      const date =
-        new Date(timestamp);
-
-
-      if (Number.isNaN(date.getTime())) {
-        return timestamp;
-      }
-
-
-      return (
-        date
-          .toISOString()
-          .replace("T", " ")
-          .substring(0, 19)
-        + " UTC"
-      );
-    }
-
-
-    // ============================================================
-    // THREE.JS INITIALIZATION
-    // ============================================================
-
-    function initThree() {
-
-      const canvas =
-        document.getElementById(
-          "webgl-canvas"
-        );
-
-
-      scene = new THREE.Scene();
-
-      scene.background =
-        new THREE.Color(0x060812);
-
-
-      camera =
-        new THREE.PerspectiveCamera(
-          45,
-          window.innerWidth /
-          window.innerHeight,
-          0.1,
-          1000
-        );
-
-
-      camera.position.set(
-        12,
-        10,
-        18
-      );
-
-
-      renderer =
-        new THREE.WebGLRenderer({
-
-          canvas,
-
-          antialias: true
-
-        });
-
-
-      renderer.setSize(
-        window.innerWidth,
-        window.innerHeight
-      );
-
-
-      renderer.setPixelRatio(
-        Math.min(
-          window.devicePixelRatio,
-          2
-        )
-      );
-
-
-      controls =
-        new THREE.OrbitControls(
-          camera,
-          renderer.domElement
-        );
-
-
-      controls.enableDamping = true;
-
-      controls.dampingFactor = 0.05;
-
-      controls.minDistance = 7;
-
-      controls.maxDistance = 50;
-
-
-      // ----------------------------------------------------------
-      // Lighting
-      // ----------------------------------------------------------
-
-      const ambientLight =
-        new THREE.AmbientLight(
-          0x223344,
-          1.2
-        );
-
-      scene.add(ambientLight);
-
-
-      const sunLight =
-        new THREE.DirectionalLight(
-          0xffffff,
-          2.0
-        );
-
-      sunLight.position.set(
-        30,
-        20,
-        20
-      );
-
-      scene.add(sunLight);
-
-
-      // ----------------------------------------------------------
-      // Scene elements
-      // ----------------------------------------------------------
-
-      createStarfield();
-
-      createEarth();
-
-      createSatellites();
-
-      createTrajectoryLines();
-
-
-      window.addEventListener(
-        "resize",
-        onWindowResize
-      );
-    }
-
-
-    // ============================================================
-    // STARFIELD
-    // ============================================================
-
-    function createStarfield() {
-
-      const starGeom =
-        new THREE.BufferGeometry();
-
-
-      const starCount = 2000;
-
-      const starPos =
-        new Float32Array(
-          starCount * 3
-        );
-
-
-      for (
-        let i = 0;
-        i < starCount * 3;
-        i += 3
-      ) {
-
-        const r =
-          200 +
-          Math.random() * 300;
-
-        const theta =
-          Math.random() *
-          Math.PI * 2;
-
-        const phi =
-          Math.acos(
-            2 * Math.random() - 1
-          );
-
-
-        starPos[i] =
-          r *
-          Math.sin(phi) *
-          Math.cos(theta);
-
-        starPos[i + 1] =
-          r *
-          Math.sin(phi) *
-          Math.sin(theta);
-
-        starPos[i + 2] =
-          r *
-          Math.cos(phi);
-      }
-
-
-      starGeom.setAttribute(
-        "position",
-        new THREE.BufferAttribute(
-          starPos,
-          3
-        )
-      );
-
-
-      const starMat =
-        new THREE.PointsMaterial({
-
-          color: 0x94a3b8,
-
-          size: 0.8,
-
-          transparent: true,
-
-          opacity: 0.8
-        });
-
-
-      const stars =
-        new THREE.Points(
-          starGeom,
-          starMat
-        );
-
-
-      scene.add(stars);
-    }
-
-
-    // ============================================================
-    // EARTH
-    // ============================================================
-
-    function createEarth() {
-
-      const geom =
-        new THREE.SphereGeometry(
-          EARTH_RADIUS_SCALED,
-          64,
-          64
-        );
-
-
-      const mat =
-        new THREE.MeshPhongMaterial({
-
-          color: 0x0f2b48,
-
-          emissive: 0x051322,
-
-          specular: 0x1e3a5f,
-
-          shininess: 25,
-
-          wireframe: false
-        });
-
-
-      earthMesh =
-        new THREE.Mesh(
-          geom,
-          mat
-        );
-
-
-      scene.add(earthMesh);
-
-
-      // Latitude / longitude wireframe
-
-      const wireGeom =
-        new THREE.SphereGeometry(
-          EARTH_RADIUS_SCALED * 1.002,
-          32,
-          24
-        );
-
-
-      const wireMat =
-        new THREE.MeshBasicMaterial({
-
-          color: 0x1e3a8a,
-
-          wireframe: true,
-
-          transparent: true,
-
-          opacity: 0.35
-        });
-
-
-      const wire =
-        new THREE.Mesh(
-          wireGeom,
-          wireMat
-        );
-
-
-      earthMesh.add(wire);
-
-
-      // Equator
-
-      const eqGeom =
-        new THREE.BufferGeometry();
-
-
-      const eqPts = [];
-
-
-      for (
-        let i = 0;
-        i <= 64;
-        i++
-      ) {
-
-        const th =
-          (i / 64) *
-          Math.PI * 2;
-
-
-        eqPts.push(
-
-          EARTH_RADIUS_SCALED *
-          1.004 *
-          Math.cos(th),
-
-          0,
-
-          EARTH_RADIUS_SCALED *
-          1.004 *
-          Math.sin(th)
-
-        );
-      }
-
-
-      eqGeom.setAttribute(
-
-        "position",
-
-        new THREE.Float32BufferAttribute(
-          eqPts,
-          3
-        )
-      );
-
-
-      const eqMat =
-        new THREE.LineBasicMaterial({
-
-          color: 0x38bdf8,
-
-          transparent: true,
-
-          opacity: 0.7
-        });
-
-
-      const eqLine =
-        new THREE.Line(
-          eqGeom,
-          eqMat
-        );
-
-
-      earthMesh.add(eqLine);
-    }
-
-
-    // ============================================================
-    // SATELLITES
-    // ============================================================
-
-    function createSatellites() {
-
-      // CARTOSAT-3
-
-      const satGeom =
-        new THREE.SphereGeometry(
-          0.18,
-          16,
-          16
-        );
-
-
-      const satMat =
-        new THREE.MeshBasicMaterial({
-          color: 0x00f0ff
-        });
-
-
-      satMesh =
-        new THREE.Mesh(
-          satGeom,
-          satMat
-        );
-
-
-      scene.add(satMesh);
-
-
-      // PSLV R/B
-
-      const secGeom =
-        new THREE.BoxGeometry(
-          0.24,
-          0.24,
-          0.24
-        );
-
-
-      const secMat =
-        new THREE.MeshBasicMaterial({
-          color: 0xf43f5e
-        });
-
-
-      secMesh =
-        new THREE.Mesh(
-          secGeom,
-          secMat
-        );
-
-
-      scene.add(secMesh);
-    }
-
-
-    // ============================================================
-    // TRAJECTORY LINES
-    // ============================================================
-
-    function createTrajectoryLines() {
-
-      satTrailGeom =
-        new THREE.BufferGeometry();
-
-      secTrailGeom =
-        new THREE.BufferGeometry();
-
-
-      satTrailLine =
-        new THREE.Line(
-
-          satTrailGeom,
-
-          new THREE.LineBasicMaterial({
-
-            color: 0x38bdf8,
-
-            linewidth: 2
-          })
-        );
-
-
-      secTrailLine =
-        new THREE.Line(
-
-          secTrailGeom,
-
-          new THREE.LineBasicMaterial({
-
-            color: 0xfb7185,
-
-            linewidth: 2
-          })
-        );
-
-
-      scene.add(satTrailLine);
-
-      scene.add(secTrailLine);
-
-
-      // ----------------------------------------------------------
-      // Conjunction line
-      // ----------------------------------------------------------
-
-      const conjGeom =
-        new THREE.BufferGeometry()
-          .setFromPoints([
-
-            new THREE.Vector3(),
-
-            new THREE.Vector3()
-
-          ]);
-
-
-      conjunctionLine =
-        new THREE.Line(
-
-          conjGeom,
-
-          new THREE.LineDashedMaterial({
-
-            color: 0xef4444,
-
-            dashSize: 0.3,
-
-            gapSize: 0.2,
-
-            linewidth: 2
-          })
-        );
-
-
-      conjunctionLine.computeLineDistances();
-
-      conjunctionLine.visible = false;
-
-      scene.add(conjunctionLine);
-
-
-      // ----------------------------------------------------------
-      // Full SGP4 trajectories
-      // ----------------------------------------------------------
-
-      satOrbitLine =
-        new THREE.Line(
-
-          new THREE.BufferGeometry(),
-
-          new THREE.LineBasicMaterial({
-
-            color: 0x00f0ff,
-
-            transparent: true,
-
-            opacity: 0.45
-          })
-        );
-
-
-      secOrbitLine =
-        new THREE.Line(
-
-          new THREE.BufferGeometry(),
-
-          new THREE.LineBasicMaterial({
-
-            color: 0xfb7185,
-
-            transparent: true,
-
-            opacity: 0.45
-          })
-        );
-
-
-      scene.add(satOrbitLine);
-
-      scene.add(secOrbitLine);
-    }
-
-
-    // ============================================================
-    // BUILD TRAJECTORIES DIRECTLY FROM SGP4 CSV
-    // ============================================================
-
-    function updateRealTrajectoryLines() {
-
-      if (
-        !realDataReady ||
-        !realStates.length
-      ) {
-        return;
-      }
-
-
-      const satPoints =
-        realStates.map(frame =>
-
-          new THREE.Vector3(
-
-            frame.cartosat.x * SCALE,
-
-            frame.cartosat.y * SCALE,
-
-            frame.cartosat.z * SCALE
-
-          )
-        );
-
-
-      const secPoints =
-        realStates.map(frame =>
-
-          new THREE.Vector3(
-
-            frame.pslv.x * SCALE,
-
-            frame.pslv.y * SCALE,
-
-            frame.pslv.z * SCALE
-
-          )
-        );
-
-
-      satOrbitLine.geometry.dispose();
-
-      satOrbitLine.geometry =
-        new THREE.BufferGeometry()
-          .setFromPoints(
-            satPoints
-          );
-
-
-      secOrbitLine.geometry.dispose();
-
-      secOrbitLine.geometry =
-        new THREE.BufferGeometry()
-          .setFromPoints(
-            secPoints
-          );
-    }
-
-
-    // ============================================================
-    // GET SYNTHETIC TEST STATE
-    // ============================================================
-
-    function getSyntheticState(t) {
+    function propagateKeplerian(obj, elapsedSec) {
+      const a = obj.sma;
+      const e = obj.ecc;
+      const incRad = (obj.inc * Math.PI) / 180.0;
+      const raanRad = (obj.raan * Math.PI) / 180.0;
+      const argpRad = (obj.argp * Math.PI) / 180.0;
+
+      // Mean motion n (rad/s)
+      const n = Math.sqrt(MU_EARTH / (a * a * a));
+
+      // Current Mean Anomaly
+      const ma0Rad = (obj.ma0 * Math.PI) / 180.0;
+      let M = (ma0Rad + n * elapsedSec) % (2.0 * Math.PI);
+      if (M < 0) M += 2.0 * Math.PI;
+
+      // Eccentric Anomaly
+      const E = solveKepler(M, e);
+
+      // True Anomaly nu
+      const sinNu = (Math.sqrt(1.0 - e * e) * Math.sin(E)) / (1.0 - e * Math.cos(E));
+      const cosNu = (Math.cos(E) - e) / (1.0 - e * Math.cos(E));
+      const nu = Math.atan2(sinNu, cosNu);
+
+      // Distance from geocenter
+      const r = a * (1.0 - e * Math.cos(E));
+
+      // In-plane position
+      const x_orb = r * Math.cos(nu);
+      const y_orb = r * Math.sin(nu);
+
+      // In-plane velocity
+      const p = a * (1.0 - e * e);
+      const h_ang = Math.sqrt(MU_EARTH * p);
+      const vx_orb = (h_ang / p) * (-Math.sin(nu));
+      const vy_orb = (h_ang / p) * (e + Math.cos(nu));
+
+      // 3-1-3 Euler rotation matrix from orbital plane to ECI:
+      // R = Rz(-raan) * Rx(-inc) * Rz(-argp)
+      const u = nu + argpRad;
+      const cosU = Math.cos(u);
+      const sinU = Math.sin(u);
+      const cosRaan = Math.cos(raanRad);
+      const sinRaan = Math.sin(raanRad);
+      const cosInc = Math.cos(incRad);
+      const sinInc = Math.sin(incRad);
+
+      const x = r * (cosRaan * cosU - sinRaan * sinU * cosInc);
+      const y = r * (sinRaan * cosU + cosRaan * sinU * cosInc);
+      const z = r * (sinU * sinInc);
+
+      // Radial and transverse velocity components
+      const vr = Math.sqrt(MU_EARTH / p) * (e * Math.sin(nu));
+      const vt = Math.sqrt(MU_EARTH / p) * (1.0 + e * Math.cos(nu));
+
+      const vx = (x / r) * vr + (-sinRaan * cosU * cosInc - cosRaan * sinU) * vt;
+      const vy = (y / r) * vr + (cosRaan * cosU * cosInc - sinRaan * sinU) * vt;
+      const vz = (z / r) * vr + (sinInc * cosU) * vt;
 
       return {
-
-        cartosat: {
-
-          x: -1000 + 5 * t,
-
-          y: 7000,
-
-          z: 0,
-
-          vx: 5,
-
-          vy: 0,
-
-          vz: 0
-        },
-
-
-        pslv: {
-
-          x: 1000 - 5 * t,
-
-          y: 7005,
-
-          z: 0,
-
-          vx: -5,
-
-          vy: 0,
-
-          vz: 0
-        }
+        pos: new THREE.Vector3(x, y, z),
+        vel: new THREE.Vector3(vx, vy, vz),
+        alt: r - R_EARTH,
+        speed: Math.sqrt(vx * vx + vy * vy + vz * vz)
       };
     }
 
-
-    // ============================================================
-    // MAIN SIMULATION UPDATE
-    // ============================================================
-
-    function updateSimulation(dt) {
-
-      if (
-        !realDataReady &&
-        mode === "real"
-      ) {
-        return;
-      }
-
-
-      let state;
-
-      let timeText;
-
-
-      // ==========================================================
-      // REAL SGP4 MODE
-      // ==========================================================
-
-      if (mode === "real") {
-
-        if (!realStates.length) {
-          return;
-        }
-
-
-        // One frame = one simulated minute.
-        // speed = playback multiplier.
-
-        if (!isPaused) {
-
-          realFrameAccumulator +=
-            dt * speed;
-
-
-          while (
-            realFrameAccumulator >= 1
-          ) {
-
-            realFrameAccumulator -= 1;
-
-            realFrameIndex++;
-
-            if (
-              realFrameIndex >=
-              realStates.length
-            ) {
-
-              realFrameIndex =
-                realStates.length - 1;
-
-              isPaused = true;
-
-              document.getElementById(
-                "btn-play"
-              ).innerText = "▶ PLAY";
-
-              document.getElementById(
-                "hud-engine-status"
-              ).innerText = "PLAYBACK COMPLETE";
-
-              document.getElementById(
-                "hud-engine-status"
-              ).style.color = "#f59e0b";
-
-              break;
-            }
-          }
-        }
-
-
-        state =
-          realStates[
-          realFrameIndex
-          ];
-
-
-        timeText =
-          formatUtcTime(
-            state.time
-          );
-      }
-
-
-      // ==========================================================
-      // SYNTHETIC MODE
-      // ==========================================================
-
-      else {
-
-        if (!isPaused) {
-
-          syntheticTimeSec +=
-            dt * speed;
-        }
-
-
-        if (
-          syntheticTimeSec > 400
-        ) {
-
-          syntheticTimeSec = 0;
-
-          satTrailPositions.length = 0;
-
-          secTrailPositions.length = 0;
-        }
-
-
-        state =
-          getSyntheticState(
-            syntheticTimeSec
-          );
-
-
-        timeText =
-          `SYNTHETIC T+${syntheticTimeSec.toFixed(1)} s`;
-      }
-
-
-      // ==========================================================
-      // CURRENT POSITIONS / VELOCITIES
-      // ==========================================================
-
-      const pA = [
-
-        state.cartosat.x,
-
-        state.cartosat.y,
-
-        state.cartosat.z
-      ];
-
-
-      const vA = [
-
-        state.cartosat.vx,
-
-        state.cartosat.vy,
-
-        state.cartosat.vz
-      ];
-
-
-      const pB = [
-
-        state.pslv.x,
-
-        state.pslv.y,
-
-        state.pslv.z
-      ];
-
-
-      const vB = [
-
-        state.pslv.vx,
-
-        state.pslv.vy,
-
-        state.pslv.vz
-      ];
-
-
-      // ==========================================================
-      // UPDATE 3D OBJECT POSITIONS
-      // ==========================================================
-
-      satMesh.position.set(
-
-        pA[0] * SCALE,
-
-        pA[1] * SCALE,
-
-        pA[2] * SCALE
+    // =========================================================================
+    // THREE.JS INITIALIZATION & SCENE SETUP
+    // =========================================================================
+
+    function initThree() {
+      const canvas = document.getElementById("webgl-canvas");
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(
+        45,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        2000
       );
+      camera.position.set(16, 12, 22);
 
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        powerPreference: "high-performance"
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-      secMesh.position.set(
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 7.0;
+      controls.maxDistance = 120.0;
 
-        pB[0] * SCALE,
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0x22334e, 1.4);
+      scene.add(ambientLight);
 
-        pB[1] * SCALE,
+      const sunLight = new THREE.DirectionalLight(0xffffff, 2.2);
+      sunLight.position.set(50, 30, 40);
+      scene.add(sunLight);
 
-        pB[2] * SCALE
+      const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+      rimLight.position.set(-50, -20, -30);
+      scene.add(rimLight);
+
+      // Starfield
+      createDeepStarfield();
+
+      // Earth
+      createPhotorealisticEarth();
+
+      // Equator Ring
+      const eqGeom = new THREE.BufferGeometry();
+      const eqPts = [];
+      for (let i = 0; i <= 100; i++) {
+        const theta = (i / 100) * Math.PI * 2;
+        eqPts.push(Math.cos(theta) * (EARTH_RADIUS_SCALED + 0.02), 0, Math.sin(theta) * (EARTH_RADIUS_SCALED + 0.02));
+      }
+      eqGeom.setAttribute("position", new THREE.Float32BufferAttribute(eqPts, 3));
+      const eqLine = new THREE.Line(eqGeom, new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.25 }));
+      scene.add(eqLine);
+
+      // Dynamic Conjunction Line between Primary and Target
+      const conjGeom = new THREE.BufferGeometry();
+      conjGeom.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+      conjunctionLine = new THREE.Line(
+        conjGeom,
+        new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8, linewidth: 2 })
       );
+      scene.add(conjunctionLine);
 
+      // Initialize Catalog Objects
+      INITIAL_CATALOG.forEach(def => createSpaceObject(def));
 
-      // ==========================================================
-      // TRAILS
-      // ==========================================================
+      // Build UI list
+      renderCatalogUI();
 
-      satTrailPositions.push(
-
-        new THREE.Vector3(
-
-          pA[0] * SCALE,
-
-          pA[1] * SCALE,
-
-          pA[2] * SCALE
-        )
-      );
-
-
-      secTrailPositions.push(
-
-        new THREE.Vector3(
-
-          pB[0] * SCALE,
-
-          pB[1] * SCALE,
-
-          pB[2] * SCALE
-        )
-      );
-
-
-      if (
-        satTrailPositions.length >
-        MAX_TRAIL
-      ) {
-        satTrailPositions.shift();
-      }
-
-
-      if (
-        secTrailPositions.length >
-        MAX_TRAIL
-      ) {
-        secTrailPositions.shift();
-      }
-
-
-      satTrailGeom.setFromPoints(
-        satTrailPositions
-      );
-
-
-      secTrailGeom.setFromPoints(
-        secTrailPositions
-      );
-
-
-      // ==========================================================
-      // RELATIVE MOTION ANALYSIS
-      // Same definitions as analysis_engine.py
-      // ==========================================================
-
-      const dx =
-        pA[0] - pB[0];
-
-      const dy =
-        pA[1] - pB[1];
-
-      const dz =
-        pA[2] - pB[2];
-
-
-      const dist =
-        Math.sqrt(
-
-          dx * dx +
-
-          dy * dy +
-
-          dz * dz
-
-        );
-
-
-      const dvx =
-        vA[0] - vB[0];
-
-      const dvy =
-        vA[1] - vB[1];
-
-      const dvz =
-        vA[2] - vB[2];
-
-
-      const relSpd =
-        Math.sqrt(
-
-          dvx * dvx +
-
-          dvy * dvy +
-
-          dvz * dvz
-
-        );
-
-
-      const dot =
-        dx * dvx +
-        dy * dvy +
-        dz * dvz;
-
-
-      const closingSpd =
-        dist > 0
-          ? -dot / dist
-          : 0;
-
-
-      let cosAng =
-        (
-          dist > 0 &&
-          relSpd > 0
-        )
-          ? dot /
-          (dist * relSpd)
-          : 0;
-
-
-      cosAng =
-        Math.max(
-          -1,
-          Math.min(
-            1,
-            cosAng
-          )
-        );
-
-
-      const appAngle =
-        Math.acos(
-          cosAng
-        ) *
-        180 /
-        Math.PI;
-
-
-      // ==========================================================
-      // CONJUNCTION VISUAL
-      // ==========================================================
-
-      if (dist < 4000) {
-
-        conjunctionLine.visible = true;
-
-        conjunctionLine.geometry
-          .setFromPoints([
-
-            satMesh.position,
-
-            secMesh.position
-
-          ]);
-
-        conjunctionLine
-          .computeLineDistances();
-
-      } else {
-
-        conjunctionLine.visible = false;
-      }
-
-
-      // ==========================================================
-      // CAD / TCA
-      // ==========================================================
-
-      if (mode === "real") {
-
-        if (realCAD !== null) {
-
-          cad_km =
-            realCAD;
-        }
-
-
-        if (realTCA !== null) {
-
-          tca_str =
-            formatUtcTime(
-              realTCA
-            );
-        }
-
-      } else {
-
-        if (dist < cad_km) {
-
-          cad_km = dist;
-
-          tca_str =
-            timeText;
-        }
-      }
-
-
-      // ==========================================================
-      // RISK CLASSIFICATION
-      // ==========================================================
-
-      let status = "SAFE";
-
-      let level = "LOW";
-
-
-      if (
-        dist <=
-        CLOSE_APPROACH_KM
-      ) {
-
-        status =
-          "CLOSE APPROACH";
-
-        level =
-          "HIGH";
-
-
-        if (
-          !closeApproachDetected
-        ) {
-
-          closeApproachDetected =
-            true;
-
-
-          persistedRecord = {
-
-            cad: cad_km,
-
-            tca: tca_str
-          };
-        }
-
-      } else if (
-        dist <=
-        SAFE_DISTANCE_KM
-      ) {
-
-        status =
-          "MONITOR";
-
-        level =
-          "MEDIUM";
-      }
-
-
-      if (
-        closeApproachDetected &&
-        persistedRecord
-      ) {
-
-        persistedRecord.cad =
-          cad_km;
-
-        persistedRecord.tca =
-          tca_str;
-      }
-
-
-      // ==========================================================
-      // HUD — TIME
-      // ==========================================================
-
-      document.getElementById(
-        "hud-time"
-      ).innerText =
-        timeText;
-
-
-      // ==========================================================
-      // CARTOSAT TELEMETRY
-      // ==========================================================
-
-      const satAltitude =
-        Math.sqrt(
-
-          pA[0] ** 2 +
-
-          pA[1] ** 2 +
-
-          pA[2] ** 2
-
-        ) - R_EARTH;
-
-
-      const satSpeed =
-        Math.sqrt(
-
-          vA[0] ** 2 +
-
-          vA[1] ** 2 +
-
-          vA[2] ** 2
-
-        );
-
-
-      document.getElementById(
-        "cartosat-alt"
-      ).innerText =
-        `${satAltitude.toFixed(2)} km`;
-
-
-      document.getElementById(
-        "cartosat-spd"
-      ).innerText =
-        `${satSpeed.toFixed(3)} km/s`;
-
-
-      document.getElementById(
-        "cartosat-pos"
-      ).innerText =
-        `[${pA[0].toFixed(1)}, ` +
-        `${pA[1].toFixed(1)}, ` +
-        `${pA[2].toFixed(1)}]`;
-
-
-      // ==========================================================
-      // PSLV R/B TELEMETRY
-      // ==========================================================
-
-      const pslvAltitude =
-        Math.sqrt(
-
-          pB[0] ** 2 +
-
-          pB[1] ** 2 +
-
-          pB[2] ** 2
-
-        ) - R_EARTH;
-
-
-      const pslvSpeed =
-        Math.sqrt(
-
-          vB[0] ** 2 +
-
-          vB[1] ** 2 +
-
-          vB[2] ** 2
-
-        );
-
-
-      document.getElementById(
-        "pslv-alt"
-      ).innerText =
-        `${pslvAltitude.toFixed(2)} km`;
-
-
-      document.getElementById(
-        "pslv-spd"
-      ).innerText =
-        `${pslvSpeed.toFixed(3)} km/s`;
-
-
-      document.getElementById(
-        "pslv-pos"
-      ).innerText =
-        `[${pB[0].toFixed(1)}, ` +
-        `${pB[1].toFixed(1)}, ` +
-        `${pB[2].toFixed(1)}]`;
-
-
-      // ==========================================================
-      // ENCOUNTER TELEMETRY
-      // ==========================================================
-
-      document.getElementById(
-        "enc-dist"
-      ).innerText =
-        `${dist.toLocaleString(
-          undefined,
-          {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          }
-        )} km`;
-
-
-      document.getElementById(
-        "enc-rel-spd"
-      ).innerText =
-        `${relSpd.toFixed(4)} km/s`;
-
-
-      document.getElementById(
-        "enc-close-spd"
-      ).innerText =
-        `${closingSpd.toFixed(4)} km/s ` +
-        `(${closingSpd > 0 ? "APPROACH" : "SEPARATING"})`;
-
-
-      document.getElementById(
-        "enc-angle"
-      ).innerText =
-        `${appAngle.toFixed(2)}°`;
-
-
-      // ==========================================================
-      // CAD / TCA DISPLAY
-      // ==========================================================
-
-      document.getElementById(
-        "hud-cad"
-      ).innerText =
-        `${cad_km.toLocaleString(
-          undefined,
-          {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          }
-        )} km`;
-
-
-      document.getElementById(
-        "hud-tca"
-      ).innerText =
-        tca_str;
-
-
-      // ==========================================================
-      // STATUS DISPLAY
-      // ==========================================================
-
-      const badge =
-        document.getElementById(
-          "status-badge"
-        );
-
-
-      badge.innerText =
-        `STATUS: ${status} [${level}]`;
-
-
-      badge.className =
-        `status-banner ${status === "CLOSE APPROACH"
-          ? "close-approach"
-          : (
-            status === "MONITOR"
-              ? "monitor"
-              : ""
-          )
-        }`;
-
-
-      // ==========================================================
-      // ALARM
-      // ==========================================================
-
-      const alarmBox =
-        document.getElementById(
-          "alarm-box"
-        );
-
-
-      if (closeApproachDetected) {
-
-        alarmBox.style.display =
-          "block";
-
-
-        document.getElementById(
-          "alarm-cad"
-        ).innerText =
-          `${persistedRecord.cad.toFixed(2)} km`;
-
-
-        document.getElementById(
-          "alarm-tca"
-        ).innerText =
-          persistedRecord.tca;
-
-      } else {
-
-        alarmBox.style.display =
-          "none";
-      }
+      window.addEventListener("resize", onWindowResize);
     }
 
+    // =========================================================================
+    // PHOTOREALISTIC PROCEDURAL EARTH & STARFIELD
+    // =========================================================================
 
-    // ============================================================
-    // RESET
-    // ============================================================
+    function createDeepStarfield() {
+      const starCount = 3000;
+      const starGeom = new THREE.BufferGeometry();
+      const starPos = [];
+      const starColors = [];
 
-    function resetSimulation() {
+      for (let i = 0; i < starCount; i++) {
+        const r = 400 + Math.random() * 500;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(Math.random() * 2 - 1);
 
-      realFrameIndex = 0;
+        starPos.push(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
 
-      realFrameAccumulator = 0;
-
-      syntheticTimeSec = 0;
-
-      closeApproachDetected =
-        false;
-
-      persistedRecord = null;
-
-
-      if (mode === "real") {
-
-        if (
-          realCAD === null ||
-          realTCA === null
-        ) {
-
-          calculateFallbackSummary();
+        const shade = 0.7 + Math.random() * 0.3;
+        if (Math.random() > 0.8) {
+          starColors.push(shade * 0.7, shade * 0.9, shade * 1.0); // Cyan/blue star
+        } else if (Math.random() > 0.6) {
+          starColors.push(shade * 1.0, shade * 0.8, shade * 0.6); // Amber star
+        } else {
+          starColors.push(shade, shade, shade);
         }
-
-
-        cad_km =
-          realCAD !== null
-            ? realCAD
-            : Infinity;
-
-
-        tca_str =
-          realTCA !== null
-            ? formatUtcTime(realTCA)
-            : "Calculating...";
-
-      } else {
-
-        cad_km =
-          Infinity;
-
-        tca_str =
-          "Calculating...";
       }
 
+      starGeom.setAttribute("position", new THREE.Float32BufferAttribute(starPos, 3));
+      starGeom.setAttribute("color", new THREE.Float32BufferAttribute(starColors, 3));
 
-      satTrailPositions.length = 0;
-
-      secTrailPositions.length = 0;
-
-
-      if (satTrailGeom) {
-
-        satTrailGeom.setFromPoints([]);
-      }
-
-
-      if (secTrailGeom) {
-
-        secTrailGeom.setFromPoints([]);
-      }
-
-
-      if (
-        mode === "real" &&
-        realDataReady
-      ) {
-
-        updateSimulation(0);
-      }
+      const starMat = new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, opacity: 0.85 });
+      scene.add(new THREE.Points(starGeom, starMat));
     }
 
+    function createPhotorealisticEarth() {
+      // Procedural Earth surface canvas
+      const width = 1024;
+      const height = 512;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
 
-    // ============================================================
-    // MODE SWITCH
-    // ============================================================
+      // Deep Ocean Gradient
+      const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
+      oceanGrad.addColorStop(0, "#081b33");
+      oceanGrad.addColorStop(0.5, "#0b2545");
+      oceanGrad.addColorStop(1, "#081b33");
+      ctx.fillStyle = oceanGrad;
+      ctx.fillRect(0, 0, width, height);
 
-    function setMode(newMode) {
-
-      if (
-        newMode === "real" &&
-        !realDataReady
-      ) {
-
-        return;
+      // Procedural Continents
+      ctx.fillStyle = "#1e3a29";
+      for (let i = 0; i < 400; i++) {
+        const cx = Math.random() * width;
+        const cy = 60 + Math.random() * (height - 120);
+        const radius = 20 + Math.random() * 60;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-
-      mode = newMode;
-
-
-      resetSimulation();
-
-
-      const realBtn =
-        document.getElementById(
-          "btn-mode-real"
-        );
-
-
-      const synBtn =
-        document.getElementById(
-          "btn-mode-synthetic"
-        );
-
-
-      const badge =
-        document.getElementById(
-          "mode-badge"
-        );
-
-
-      const modeText =
-        document.getElementById(
-          "mode-text"
-        );
-
-
-      const pName =
-        document.getElementById(
-          "primary-name"
-        );
-
-
-      const sName =
-        document.getElementById(
-          "secondary-name"
-        );
-
-
-      if (mode === "real") {
-
-        realBtn.className =
-          "btn active";
-
-
-        synBtn.className =
-          "btn danger";
-
-
-        badge.innerText =
-          "D1 PROTOTYPE";
-
-
-        badge.style.borderColor =
-          "var(--accent-blue)";
-
-
-        modeText.innerText =
-          "REAL SGP4 DATA";
-
-
-        pName.innerText =
-          "CARTOSAT-3 (NORAD 44804)";
-
-
-        sName.innerText =
-          "PSLV R/B (NORAD 44805)";
-
-
-        satOrbitLine.visible =
-          true;
-
-
-        secOrbitLine.visible =
-          true;
-
-
-        camera.position.set(
-          12,
-          10,
-          18
-        );
-
-      } else {
-
-        realBtn.className =
-          "btn";
-
-
-        synBtn.className =
-          "btn danger active";
-
-
-        badge.innerText =
-          "SYNTHETIC TEST";
-
-
-        badge.style.borderColor =
-          "var(--accent-red)";
-
-
-        modeText.innerText =
-          "CONTROLLED ENCOUNTER (5km CAD)";
-
-
-        pName.innerText =
-          "TEST SATELLITE (A)";
-
-
-        sName.innerText =
-          "SYNTHETIC SECONDARY OBJECT (B)";
-
-
-        satOrbitLine.visible =
-          false;
-
-
-        secOrbitLine.visible =
-          false;
-
-
-        camera.position.set(
-          0,
-          10,
-          15
-        );
+      // Latitude/Longitude Grid on texture
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.15)";
+      ctx.lineWidth = 1;
+      for (let lat = 30; lat < height; lat += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, lat);
+        ctx.lineTo(width, lat);
+        ctx.stroke();
+      }
+      for (let lon = 0; lon < width; lon += 60) {
+        ctx.beginPath();
+        ctx.moveTo(lon, 0);
+        ctx.lineTo(lon, height);
+        ctx.stroke();
       }
 
-
-      controls.update();
-    }
-
-
-    // ============================================================
-    // BUTTON CONTROLS
-    // ============================================================
-
-    document
-      .getElementById("btn-play")
-      .addEventListener(
-        "click",
-        () => {
-
-          isPaused =
-            !isPaused;
-
-
-          document.getElementById(
-            "btn-play"
-          ).innerText =
-            isPaused
-              ? "▶ PLAY"
-              : "⏸ PAUSE";
-
-
-          document.getElementById(
-            "hud-engine-status"
-          ).innerText =
-            isPaused
-              ? "PAUSED"
-              : "ACTIVE RUNNING";
-
-
-          document.getElementById(
-            "hud-engine-status"
-          ).style.color =
-            isPaused
-              ? "#f59e0b"
-              : "#10b981";
-        }
-      );
-
-
-    document
-      .getElementById("btn-reset")
-      .addEventListener(
-        "click",
-        resetSimulation
-      );
-
-
-    document
-      .querySelectorAll(
-        "[data-speed]"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            document
-              .querySelectorAll(
-                "[data-speed]"
-              )
-              .forEach(
-                b =>
-                  b.classList.remove(
-                    "active"
-                  )
-              );
-
-
-            button.classList.add(
-              "active"
-            );
-
-
-            speed =
-              parseInt(
-                button.getAttribute(
-                  "data-speed"
-                )
-              );
-
-
-            document.getElementById(
-              "speed-label"
-            ).innerText =
-              `${speed}x SPEED`;
-          }
-        );
+      const earthTexture = new THREE.CanvasTexture(canvas);
+      const earthGeom = new THREE.SphereGeometry(EARTH_RADIUS_SCALED, 64, 64);
+      const earthMat = new THREE.MeshStandardMaterial({
+        map: earthTexture,
+        roughness: 0.7,
+        metalness: 0.1
       });
 
+      earthMesh = new THREE.Mesh(earthGeom, earthMat);
+      scene.add(earthMesh);
 
-    document
-      .getElementById(
-        "btn-mode-real"
-      )
-      .addEventListener(
-        "click",
-        () =>
-          setMode("real")
-      );
-
-
-    document
-      .getElementById(
-        "btn-mode-synthetic"
-      )
-      .addEventListener(
-        "click",
-        () =>
-          setMode("synthetic")
-      );
-
-
-    // ============================================================
-    // WINDOW RESIZE
-    // ============================================================
-
-    function onWindowResize() {
-
-      camera.aspect =
-        window.innerWidth /
-        window.innerHeight;
-
-
-      camera.updateProjectionMatrix();
-
-
-      renderer.setSize(
-        window.innerWidth,
-        window.innerHeight
-      );
+      // Atmosphere Glow Layer
+      const atmoGeom = new THREE.SphereGeometry(EARTH_RADIUS_SCALED * 1.025, 64, 64);
+      const atmoMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.12,
+        side: THREE.BackSide
+      });
+      atmosphereMesh = new THREE.Mesh(atmoGeom, atmoMat);
+      scene.add(atmosphereMesh);
     }
 
+    // =========================================================================
+    // SPACE OBJECT CREATION & TRAJECTORY RENDERING
+    // =========================================================================
 
-    // ============================================================
-    // ANIMATION LOOP
-    // ============================================================
+    function createSpaceObject(def) {
+      // 1. Calculate Orbit Curve (1 full period)
+      const numSteps = 120;
+      const pts = [];
+      for (let i = 0; i <= numSteps; i++) {
+        const frac = i / numSteps;
+        const p = propagateKeplerian({ ...def, ma0: def.ma0 + frac * 360.0 }, 0);
+        pts.push(p.pos.x * SCALE, p.pos.y * SCALE, p.pos.z * SCALE);
+      }
 
-    let lastTime =
-      performance.now();
-
-
-    function animate() {
-
-      requestAnimationFrame(
-        animate
+      const orbitGeom = new THREE.BufferGeometry();
+      orbitGeom.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+      const orbitColor = new THREE.Color(def.color || "#00f0ff");
+      const orbitLine = new THREE.Line(
+        orbitGeom,
+        new THREE.LineBasicMaterial({
+          color: orbitColor,
+          transparent: true,
+          opacity: def.isPrimary ? 0.85 : 0.45,
+          linewidth: def.isPrimary ? 2 : 1
+        })
       );
+      scene.add(orbitLine);
 
+      // 2. Satellite Position Marker Mesh
+      const markerSize = def.isPrimary ? 0.15 : 0.11;
+      const markerGeom = new THREE.SphereGeometry(markerSize, 16, 16);
+      const markerMat = new THREE.MeshBasicMaterial({ color: orbitColor });
+      const markerMesh = new THREE.Mesh(markerGeom, markerMat);
 
-      const now =
-        performance.now();
+      // Marker glow aura
+      const auraGeom = new THREE.SphereGeometry(markerSize * 2.2, 16, 16);
+      const auraMat = new THREE.MeshBasicMaterial({ color: orbitColor, transparent: true, opacity: 0.35 });
+      markerMesh.add(new THREE.Mesh(auraGeom, auraMat));
 
+      scene.add(markerMesh);
 
-      const dt =
-        Math.min(
-          (now - lastTime) / 1000,
-          0.1
+      // 3. Trailing Buffer
+      const trailPositions = [];
+      const trailGeom = new THREE.BufferGeometry();
+      const trailLine = new THREE.Line(
+        trailGeom,
+        new THREE.LineBasicMaterial({ color: orbitColor, transparent: true, opacity: 0.6 })
+      );
+      scene.add(trailLine);
+
+      // Store in map
+      spaceObjects.set(def.name, {
+        def,
+        orbitLine,
+        markerMesh,
+        trailLine,
+        trailPositions,
+        cad: Infinity,
+        tca: null,
+        currentPos: new THREE.Vector3(),
+        currentVel: new THREE.Vector3(),
+        currentAlt: 0,
+        currentSpeed: 0
+      });
+
+      // Update secondary dropdown in maneuver tab
+      updateManeuverDropdown();
+    }
+
+    // =========================================================================
+    // SIMULATION STEP & PHYSICS UPDATE
+    // =========================================================================
+
+    function updateSimulation(deltaSec) {
+      if (!isPaused) {
+        simCurrentTime += deltaSec * warpMultiplier * 1000;
+      }
+
+      const elapsedSec = (simCurrentTime - simStartTime) / 1000.0;
+
+      // Update UTC clock text
+      const simDate = new Date(simCurrentTime);
+      document.getElementById("sim-utc-time").innerText = simDate.toISOString().replace("T", " ").substring(0, 19);
+
+      // Slowly rotate Earth
+      if (earthMesh) earthMesh.rotation.y = elapsedSec * 0.000072921;
+
+      // Propagate all space objects
+      let primaryState = null;
+
+      spaceObjects.forEach((obj, name) => {
+        const state = propagateKeplerian(obj.def, elapsedSec);
+        obj.currentPos.copy(state.pos);
+        obj.currentVel.copy(state.vel);
+        obj.currentAlt = state.alt;
+        obj.currentSpeed = state.speed;
+
+        // Update 3D Marker Position
+        obj.markerMesh.position.set(state.pos.x * SCALE, state.pos.y * SCALE, state.pos.z * SCALE);
+
+        // Update Trail
+        obj.trailPositions.push(state.pos.x * SCALE, state.pos.y * SCALE, state.pos.z * SCALE);
+        if (obj.trailPositions.length > 300) {
+          obj.trailPositions.splice(0, 3);
+        }
+        obj.trailLine.geometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(obj.trailPositions, 3)
         );
 
+        if (name === primaryKey) {
+          primaryState = state;
+        }
+      });
 
-      lastTime = now;
+      // Update Primary Telemetry HUD
+      if (primaryState) {
+        document.getElementById("pri-alt").innerText = `${primaryState.alt.toFixed(1)} km`;
+        document.getElementById("pri-spd").innerText = `${primaryState.speed.toFixed(2)} km/s`;
+        document.getElementById("pri-pos").innerText = `[${primaryState.pos.x.toFixed(0)}, ${primaryState.pos.y.toFixed(0)}, ${primaryState.pos.z.toFixed(0)}]`;
+      }
 
+      // Update Selected Secondary Telemetry & Conjunction Assessment
+      const secondaryObj = spaceObjects.get(selectedSecondaryKey);
+      if (primaryState && secondaryObj) {
+        const secState = {
+          pos: secondaryObj.currentPos,
+          vel: secondaryObj.currentVel,
+          alt: secondaryObj.currentAlt,
+          speed: secondaryObj.currentSpeed
+        };
 
-      // Slow Earth rotation
+        document.getElementById("sec-card-name").innerText = `TARGET: ${selectedSecondaryKey}`;
+        document.getElementById("target-name-header").innerText = `TARGET: ${selectedSecondaryKey}`;
+        document.getElementById("sec-alt").innerText = `${secState.alt.toFixed(1)} km`;
+        document.getElementById("sec-spd").innerText = `${secState.speed.toFixed(2)} km/s`;
+        document.getElementById("sec-pos").innerText = `[${secState.pos.x.toFixed(0)}, ${secState.pos.y.toFixed(0)}, ${secState.pos.z.toFixed(0)}]`;
 
-      earthMesh.rotation.y +=
-        0.0005;
+        // Relative Kinematics
+        const r_rel = new THREE.Vector3().subVectors(primaryState.pos, secState.pos);
+        const v_rel = new THREE.Vector3().subVectors(primaryState.vel, secState.vel);
 
+        const dist_km = r_rel.length();
+        const rel_speed = v_rel.length();
+        const closing_speed = dist_km > 0 ? -r_rel.dot(v_rel) / dist_km : 0;
 
-      updateSimulation(dt);
-
-
-      controls.update();
-
-
-      renderer.render(
-        scene,
-        camera
-      );
-    }
-
-
-    // ============================================================
-    // START DASHBOARD
-    // ============================================================
-
-    async function startDashboard() {
-
-      try {
-
-        // Load actual Python/SGP4 output.
-
-        await loadRealOrbitalData();
-
-
-        // Load verified encounter analysis.
-
-        await loadEncounterAnalysis();
-
-
-        // Fallback if encounter CSV cannot be read.
-
-        if (
-          realCAD === null ||
-          realTCA === null
-        ) {
-
-          calculateFallbackSummary();
+        let approach_angle = 0;
+        if (dist_km > 0 && rel_speed > 0) {
+          const cosAngle = Math.max(-1, Math.min(1, r_rel.dot(v_rel) / (dist_km * rel_speed)));
+          approach_angle = (Math.acos(cosAngle) * 180) / Math.PI;
         }
 
+        // CAD & TCA tracking
+        if (dist_km < secondaryObj.cad) {
+          secondaryObj.cad = dist_km;
+          secondaryObj.tca = new Date(simCurrentTime).toISOString().substring(11, 19) + " UTC";
+        }
 
-        // Create Three.js scene.
+        // Live HUD updates
+        document.getElementById("live-distance").innerText = dist_km.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById("live-rel-speed").innerText = `${rel_speed.toFixed(3)} km/s`;
+        document.getElementById("live-closing-speed").innerText = `${closing_speed > 0 ? "↘ Approaching " : "↗ Separating "} ${Math.abs(closing_speed).toFixed(3)} km/s`;
+        document.getElementById("live-approach-angle").innerText = `${approach_angle.toFixed(1)}°`;
+        document.getElementById("live-cad").innerText = `${secondaryObj.cad.toFixed(2)} km (${secondaryObj.tca || "Tracking"})`;
 
-        initThree();
+        // Alarm status classification
+        const alarmBadge = document.getElementById("primary-alarm-badge");
+        const alarmCard = document.getElementById("alarm-card");
 
+        if (dist_km < CLOSE_APPROACH_KM) {
+          alarmBadge.className = "alarm-status-badge close";
+          alarmBadge.innerText = "CLOSE APPROACH [HIGH]";
+          alarmCard.className = "alarm-card close";
+        } else if (dist_km < SAFE_DISTANCE_KM) {
+          alarmBadge.className = "alarm-status-badge monitor";
+          alarmBadge.innerText = "MONITOR [MEDIUM]";
+          alarmCard.className = "alarm-card monitor";
+        } else {
+          alarmBadge.className = "alarm-status-badge safe";
+          alarmBadge.innerText = "SAFE [LOW]";
+          alarmCard.className = "alarm-card safe";
+        }
 
-        // Draw actual SGP4 trajectories.
-
-        updateRealTrajectoryLines();
-
-
-        // Start in verified real-data mode.
-
-        setMode("real");
-
-
-        animate();
-
-
-        console.log(
-          "D1 dashboard initialized."
+        // Update Dynamic 3D Conjunction Line
+        conjunctionLine.geometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute([
+            primaryState.pos.x * SCALE, primaryState.pos.y * SCALE, primaryState.pos.z * SCALE,
+            secState.pos.x * SCALE, secState.pos.y * SCALE, secState.pos.z * SCALE
+          ], 3)
         );
 
+        if (dist_km < CLOSE_APPROACH_KM) {
+          conjunctionLine.material.color.setHex(0xef4444);
+          conjunctionLine.material.opacity = 1.0;
+        } else if (dist_km < SAFE_DISTANCE_KM) {
+          conjunctionLine.material.color.setHex(0xf59e0b);
+          conjunctionLine.material.opacity = 0.8;
+        } else {
+          conjunctionLine.material.color.setHex(0x00f0ff);
+          conjunctionLine.material.opacity = 0.35;
+        }
 
-        console.log(
-          "SGP4 frames:",
-          realStates.length
-        );
-
-
-        console.log(
-          "CAD:",
-          realCAD,
-          "km"
-        );
-
-
-        console.log(
-          "TCA:",
-          realTCA
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Dashboard initialization failed:",
-          error
-        );
-
-
-        document.getElementById(
-          "mode-text"
-        ).innerText =
-          "DATA LOAD ERROR";
-
-
-        document.getElementById(
-          "mode-badge"
-        ).innerText =
-          "CHECK LOCAL SERVER";
-
-
-        document.getElementById(
-          "mode-badge"
-        ).style.borderColor =
-          "var(--accent-red)";
-
-
-        alert(
-
-          "Could not load the SGP4 CSV data.\n\n" +
-
-          "Run the dashboard from the repository using:\n" +
-
-          "python -m http.server 8000"
-
-        );
+        // Camera Follow Mode
+        if (cameraMode === "primary") {
+          controls.target.set(primaryState.pos.x * SCALE, primaryState.pos.y * SCALE, primaryState.pos.z * SCALE);
+        } else if (cameraMode === "conjunction") {
+          const midX = ((primaryState.pos.x + secState.pos.x) / 2) * SCALE;
+          const midY = ((primaryState.pos.y + secState.pos.y) / 2) * SCALE;
+          const midZ = ((primaryState.pos.z + secState.pos.z) / 2) * SCALE;
+          controls.target.set(midX, midY, midZ);
+        }
       }
     }
 
+    // =========================================================================
+    // UI CATALOG RENDERING & EVENT HANDLERS
+    // =========================================================================
 
-    // ============================================================
-    // START
-    // ============================================================
+    function renderCatalogUI(filter = "all") {
+      const container = document.getElementById("object-list-container");
+      container.innerHTML = "";
 
-    startDashboard();
+      let count = 0;
+      spaceObjects.forEach((obj, name) => {
+        if (filter !== "all" && obj.def.type !== filter) return;
+        count++;
 
+        const item = document.createElement("div");
+        item.className = `object-item ${obj.def.isPrimary ? "primary" : ""} ${name === selectedSecondaryKey ? "selected" : ""}`;
+        item.onclick = () => selectTargetObject(name);
+
+        const badgeClass = obj.def.isPrimary ? "badge-primary" : obj.def.type === "debris" ? "badge-debris" : obj.def.type === "custom" ? "badge-custom" : "badge-payload";
+
+        item.innerHTML = `
+          <div class="object-top">
+            <span class="object-name">
+              <span class="object-color-dot" style="color: ${obj.def.color};"></span>
+              ${name}
+            </span>
+            <span class="object-badge ${badgeClass}">${obj.def.type}</span>
+          </div>
+          <div class="object-stats">
+            <div>Alt: <span>${(obj.def.sma - R_EARTH).toFixed(0)} km</span></div>
+            <div>Inc: <span>${obj.def.inc.toFixed(1)}°</span></div>
+          </div>
+          <div class="object-actions">
+            <button onclick="event.stopPropagation(); focusCameraOnObject('${name}')">🎯 TRACK</button>
+            <button onclick="event.stopPropagation(); openEditObjectModal('${name}')">✏️ EDIT</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      document.getElementById("catalog-count-label").innerText = `${count} Objects`;
+      document.getElementById("tracked-count").innerText = spaceObjects.size;
+    }
+
+    function selectTargetObject(name) {
+      if (name === primaryKey) return;
+      selectedSecondaryKey = name;
+      renderCatalogUI();
+      showToast(`Selected conjunction target: ${name}`);
+    }
+
+    function focusCameraOnObject(name) {
+      const obj = spaceObjects.get(name);
+      if (!obj) return;
+      const pos = obj.currentPos.clone().multiplyScalar(SCALE);
+      controls.target.copy(pos);
+      showToast(`Camera focused on ${name}`);
+    }
+
+    function updateManeuverDropdown() {
+      const select = document.getElementById("maneuver-target-select");
+      if (!select) return;
+      select.innerHTML = "";
+      spaceObjects.forEach((_, name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.innerText = name;
+        select.appendChild(opt);
+      });
+    }
+
+    // =========================================================================
+    // TRAJECTORY STUDIO: DYNAMIC ADDITION & MANEUVER BURNS
+    // =========================================================================
+
+    function deployPreset(type) {
+      let def = null;
+      if (type === "iss") {
+        def = { name: "ISS (ZARYA)", type: "payload", color: "#10b981", sma: 6791, ecc: 0.0006, inc: 51.64, raan: 198.5, argp: 112.4, ma0: 247.7 };
+      } else if (type === "starlink") {
+        def = { name: `STARLINK-${Math.floor(1000 + Math.random() * 9000)}`, type: "payload", color: "#38bdf8", sma: 6921, ecc: 0.0001, inc: 53.05, raan: Math.random() * 360, argp: 90, ma0: Math.random() * 360 };
+      } else if (type === "fengyun") {
+        def = { name: `FY-1C FRAG-${Math.floor(100 + Math.random() * 900)}`, type: "debris", color: "#ef4444", sma: 7220, ecc: 0.008, inc: 98.7, raan: 45.1, argp: 210, ma0: Math.random() * 360 };
+      } else if (type === "cosmos") {
+        def = { name: `COSMOS-1408 FRAG-${Math.floor(100 + Math.random() * 900)}`, type: "debris", color: "#e11d48", sma: 6845, ecc: 0.004, inc: 82.5, raan: 110, argp: 315, ma0: Math.random() * 360 };
+      } else if (type === "near_miss") {
+        // High-precision calculated ~6.2 km close encounter relative to CARTOSAT-3
+        def = { name: "THREAT-OBJECT-OMEGA", type: "debris", color: "#ff0055", sma: 6896.3, ecc: 0.0012, inc: 97.42, raan: 332.32, argp: 145.96, ma0: 214.29 };
+      } else if (type === "polar") {
+        def = { name: `POLAR-OBSERVER-${Math.floor(10 + Math.random() * 90)}`, type: "payload", color: "#00f0ff", sma: 7051, ecc: 0.001, inc: 98.2, raan: 180, argp: 0, ma0: 0 };
+      }
+
+      if (def) {
+        if (spaceObjects.has(def.name)) {
+          def.name += `-${Math.floor(Math.random() * 99)}`;
+        }
+        createSpaceObject(def);
+        selectedSecondaryKey = def.name;
+        renderCatalogUI();
+        closeStudioModal();
+        showToast(`Deployed preset: ${def.name}`);
+      }
+    }
+
+    function openEditObjectModal(name) {
+      const obj = spaceObjects.get(name);
+      if (!obj) return;
+      document.getElementById("kep-name").value = name;
+      document.getElementById("kep-alt").value = (obj.def.sma - R_EARTH).toFixed(0);
+      document.getElementById("lbl-kep-alt").innerText = `${(obj.def.sma - R_EARTH).toFixed(0)} km`;
+      document.getElementById("kep-inc").value = obj.def.inc;
+      document.getElementById("lbl-kep-inc").innerText = `${obj.def.inc}°`;
+      document.getElementById("kep-ecc").value = obj.def.ecc;
+      document.getElementById("lbl-kep-ecc").innerText = `${obj.def.ecc}`;
+      document.getElementById("kep-raan").value = obj.def.raan;
+      document.getElementById("lbl-kep-raan").innerText = `${obj.def.raan}°`;
+      document.getElementById("kep-argp").value = obj.def.argp;
+      document.getElementById("lbl-kep-argp").innerText = `${obj.def.argp}°`;
+      document.getElementById("kep-ma").value = obj.def.ma0;
+      document.getElementById("lbl-kep-ma").innerText = `${obj.def.ma0}°`;
+      document.getElementById("kep-color").value = obj.def.color || "#00f0ff";
+      openStudioModal("tab-keplerian");
+    }
+
+    function submitKeplerianForm() {
+      const name = document.getElementById("kep-name").value.trim() || `SAT-${Math.floor(Math.random() * 9999)}`;
+      const alt = parseFloat(document.getElementById("kep-alt").value);
+      const inc = parseFloat(document.getElementById("kep-inc").value);
+      const ecc = parseFloat(document.getElementById("kep-ecc").value);
+      const raan = parseFloat(document.getElementById("kep-raan").value);
+      const argp = parseFloat(document.getElementById("kep-argp").value);
+      const ma0 = parseFloat(document.getElementById("kep-ma").value);
+      const color = document.getElementById("kep-color").value;
+      const type = document.getElementById("kep-type").value;
+
+      const def = {
+        name,
+        type: type === "payload" ? "custom" : type,
+        color,
+        sma: R_EARTH + alt,
+        ecc,
+        inc,
+        raan,
+        argp,
+        ma0,
+        isPrimary: false
+      };
+
+      // If object already exists, update its orbit
+      if (spaceObjects.has(name)) {
+        const existing = spaceObjects.get(name);
+        scene.remove(existing.orbitLine);
+        scene.remove(existing.markerMesh);
+        scene.remove(existing.trailLine);
+        spaceObjects.delete(name);
+      }
+
+      createSpaceObject(def);
+      selectedSecondaryKey = name;
+      renderCatalogUI();
+      closeStudioModal();
+      showToast(`Successfully added trajectory: ${name}`);
+    }
+
+    function submitTLEForm() {
+      const name = document.getElementById("tle-name").value.trim() || "NEW-TLE-OBJECT";
+      const text = document.getElementById("tle-text").value.trim();
+      const color = document.getElementById("tle-color").value;
+
+      const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length < 2) {
+        alert("Please paste at least 2 lines of valid TLE record.");
+        return;
+      }
+
+      const l2 = lines[lines.length - 1]; // Line 2 contains inc, raan, ecc, argp, ma
+      try {
+        const inc = parseFloat(l2.substring(8, 16));
+        const raan = parseFloat(l2.substring(17, 25));
+        const ecc = parseFloat("0." + l2.substring(26, 33));
+        const argp = parseFloat(l2.substring(34, 42));
+        const ma0 = parseFloat(l2.substring(43, 51));
+        const mm = parseFloat(l2.substring(52, 63)); // Mean motion (revs/day)
+
+        // Semi-major axis from mean motion
+        const n_rad_s = (mm * 2 * Math.PI) / 86400.0;
+        const a = Math.cbrt(MU_EARTH / (n_rad_s * n_rad_s));
+
+        const def = {
+          name,
+          type: "custom",
+          color,
+          sma: a,
+          ecc,
+          inc,
+          raan,
+          argp,
+          ma0,
+          isPrimary: false
+        };
+
+        createSpaceObject(def);
+        selectedSecondaryKey = name;
+        renderCatalogUI();
+        closeStudioModal();
+        showToast(`Parsed and deployed TLE: ${name}`);
+      } catch (err) {
+        alert(`Failed to parse TLE record: ${err.message}`);
+      }
+    }
+
+    function executeManeuverBurn() {
+      const targetName = document.getElementById("maneuver-target-select").value;
+      const target = spaceObjects.get(targetName);
+      if (!target) return;
+
+      const dV_pro = parseFloat(document.getElementById("burn-pro").value); // m/s
+      const dV_norm = parseFloat(document.getElementById("burn-norm").value); // m/s
+      const dV_rad = parseFloat(document.getElementById("burn-rad").value); // m/s
+
+      // Total delta V
+      const dV_total_km_s = Math.sqrt(dV_pro * dV_pro + dV_norm * dV_norm + dV_rad * dV_rad) / 1000.0;
+
+      // Energy change: delta_a ~= 2 * a^2 * v * delta_v / mu
+      const a = target.def.sma;
+      const v = Math.sqrt(MU_EARTH / a);
+      const delta_a_km = (2.0 * a * a * v * (dV_pro / 1000.0)) / MU_EARTH;
+
+      target.def.sma += delta_a_km;
+      target.def.inc += (dV_norm / 1000.0) * 0.15; // Small inclination perturbation
+      target.cad = Infinity; // Reset CAD
+
+      // Re-generate orbit line
+      scene.remove(target.orbitLine);
+      const pts = [];
+      for (let i = 0; i <= 120; i++) {
+        const frac = i / 120;
+        const p = propagateKeplerian({ ...target.def, ma0: target.def.ma0 + frac * 360.0 }, 0);
+        pts.push(p.pos.x * SCALE, p.pos.y * SCALE, p.pos.z * SCALE);
+      }
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+      target.orbitLine = new THREE.Line(
+        geom,
+        new THREE.LineBasicMaterial({ color: target.def.color, transparent: true, opacity: target.def.isPrimary ? 0.9 : 0.5 })
+      );
+      scene.add(target.orbitLine);
+
+      closeStudioModal();
+      showToast(`Maneuver Burn executed on ${targetName}: Δa = ${delta_a_km > 0 ? "+" : ""}${delta_a_km.toFixed(2)} km`);
+    }
+
+    // =========================================================================
+    // MODAL & UI BINDINGS
+    // =========================================================================
+
+    function openStudioModal(activeTabId = "tab-keplerian") {
+      document.getElementById("studio-modal").classList.add("active");
+      document.querySelectorAll(".modal-tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === activeTabId);
+      });
+      document.querySelectorAll(".tab-content").forEach(tc => {
+        tc.classList.toggle("active", tc.id === activeTabId);
+      });
+    }
+
+    function closeStudioModal() {
+      document.getElementById("studio-modal").classList.remove("active");
+    }
+
+    function showToast(message) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerHTML = `<span>🛰</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(50px)";
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Modal tabs click
+    document.querySelectorAll(".modal-tab-btn").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".modal-tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      };
+    });
+
+    document.getElementById("btn-open-studio").onclick = () => openStudioModal("tab-keplerian");
+    document.getElementById("btn-quick-maneuver").onclick = () => openStudioModal("tab-maneuver");
+    document.getElementById("btn-modal-close").onclick = closeStudioModal;
+    document.getElementById("btn-modal-cancel").onclick = closeStudioModal;
+
+    document.getElementById("btn-modal-submit").onclick = () => {
+      const activeTab = document.querySelector(".tab-content.active").id;
+      if (activeTab === "tab-keplerian") submitKeplerianForm();
+      else if (activeTab === "tab-tle") submitTLEForm();
+      else if (activeTab === "tab-maneuver") executeManeuverBurn();
+    };
+
+    // Sliders Live Update
+    document.getElementById("kep-alt").oninput = (e) => document.getElementById("lbl-kep-alt").innerText = `${e.target.value} km`;
+    document.getElementById("kep-inc").oninput = (e) => document.getElementById("lbl-kep-inc").innerText = `${e.target.value}°`;
+    document.getElementById("kep-ecc").oninput = (e) => document.getElementById("lbl-kep-ecc").innerText = `${e.target.value}`;
+    document.getElementById("kep-raan").oninput = (e) => document.getElementById("lbl-kep-raan").innerText = `${e.target.value}°`;
+    document.getElementById("kep-argp").oninput = (e) => document.getElementById("lbl-kep-argp").innerText = `${e.target.value}°`;
+    document.getElementById("kep-ma").oninput = (e) => document.getElementById("lbl-kep-ma").innerText = `${e.target.value}°`;
+
+    // Maneuver Burn Sliders
+    function updateBurnPreview() {
+      const pro = parseFloat(document.getElementById("burn-pro").value);
+      const norm = parseFloat(document.getElementById("burn-norm").value);
+      const rad = parseFloat(document.getElementById("burn-rad").value);
+      document.getElementById("lbl-burn-pro").innerText = `${pro} m/s`;
+      document.getElementById("lbl-burn-norm").innerText = `${norm} m/s`;
+      document.getElementById("lbl-burn-rad").innerText = `${rad} m/s`;
+
+      const total = Math.sqrt(pro * pro + norm * norm + rad * rad);
+      document.getElementById("burn-total-mag").innerText = `${total.toFixed(1)} m/s`;
+
+      // Approximate apogee shift
+      const deltaA = (2 * 6896 * 6896 * 7.6 * (pro / 1000.0)) / MU_EARTH;
+      document.getElementById("burn-alt-shift").innerText = `${deltaA >= 0 ? "+" : ""}${deltaA.toFixed(1)} km`;
+    }
+    document.getElementById("burn-pro").oninput = updateBurnPreview;
+    document.getElementById("burn-norm").oninput = updateBurnPreview;
+    document.getElementById("burn-rad").oninput = updateBurnPreview;
+
+    // Synthetic Test Button
+    document.getElementById("btn-trigger-synthetic").onclick = () => {
+      deployPreset("near_miss");
+      warpMultiplier = 10;
+      document.querySelectorAll("#warp-speed-group button").forEach(b => b.classList.remove("active"));
+      document.querySelector("#warp-speed-group button[data-speed='10']").classList.add("active");
+      showToast("Triggered Controlled Synthetic 6.2 km Threat Encounter!");
+    };
+
+    // Play/Pause & Reset
+    const playPauseBtn = document.getElementById("btn-play-pause");
+    playPauseBtn.onclick = () => {
+      isPaused = !isPaused;
+      playPauseBtn.innerText = isPaused ? "▶ PLAY" : "⏸ PAUSE";
+    };
+
+    document.getElementById("btn-reset").onclick = () => {
+      simCurrentTime = simStartTime;
+      spaceObjects.forEach(obj => {
+        obj.cad = Infinity;
+        obj.tca = null;
+        obj.trailPositions = [];
+      });
+      showToast("Simulation clock & CAD metrics reset");
+    };
+
+    // Warp Multipliers
+    document.querySelectorAll("#warp-speed-group button").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll("#warp-speed-group button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        warpMultiplier = parseInt(btn.dataset.speed);
+        showToast(`Simulation speed: ${warpMultiplier}x`);
+      };
+    });
+
+    // Camera Presets
+    document.getElementById("cam-free").onclick = () => {
+      cameraMode = "free";
+      controls.target.set(0, 0, 0);
+      showToast("Camera: Free Orbit Mode");
+    };
+    document.getElementById("cam-iso").onclick = () => {
+      cameraMode = "free";
+      camera.position.set(18, 14, 22);
+      controls.target.set(0, 0, 0);
+    };
+    document.getElementById("cam-polar").onclick = () => {
+      cameraMode = "free";
+      camera.position.set(0, 32, 0);
+      controls.target.set(0, 0, 0);
+    };
+    document.getElementById("cam-primary").onclick = () => {
+      cameraMode = "primary";
+      showToast("Camera: Tracking CARTOSAT-3");
+    };
+    document.getElementById("cam-conjunction").onclick = () => {
+      cameraMode = "conjunction";
+      showToast("Camera: Tracking Conjunction Vector");
+    };
+
+    // Catalog filters
+    document.querySelectorAll(".catalog-filters button").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".catalog-filters button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderCatalogUI(btn.dataset.filter);
+      };
+    });
+
+    // =========================================================================
+    // MAIN ANIMATION LOOP
+    // =========================================================================
+
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+
+      const deltaSec = (currentTime - lastTimestamp) / 1000.0;
+      lastTimestamp = currentTime;
+
+      // Limit physics delta in case of tab defocus
+      const clampedDelta = Math.min(deltaSec, 0.1);
+
+      updateSimulation(clampedDelta);
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Boot
+    window.addEventListener("DOMContentLoaded", () => {
+      initThree();
+      requestAnimationFrame(animate);
+      showToast("Space Operations Console Online (10 Objects Loaded)");
+    });
   </script>
 </body>
-
 </html>
