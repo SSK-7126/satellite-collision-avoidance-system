@@ -1,42 +1,110 @@
-# Satellite Collision Avoidance System
+# Satellite Anti-Collision System (ICPS)
 
-A prototype system for satellite conjunction assessment and collision-risk monitoring using real orbital data, SGP4 propagation, relative-motion analysis, and 3D visualization.
+A computational simulation designed to model orbital debris, detect potential satellite collisions, and simulate autonomous collision-avoidance manoeuvres.
 
-## Overview
+## Project Deliverables
 
-The system takes orbital data for tracked space objects, propagates their positions and velocities, calculates relative motion, identifies the closest approach, and classifies the encounter using configurable prototype distance thresholds.
+### D1 — Orbital Environment Simulation
+- Model a protected satellite and surrounding debris objects.
+- Simulate orbital motion using gravitational dynamics.
+- Generate and visualize orbital trajectories.
+- Study the relative motion of space objects.
 
-The project currently uses:
+### D2 — Autonomous Collision Avoidance
+- Detect potential close approaches between satellites and debris.
+- Calculate Time of Closest Approach (TCA) and miss distance.
+- Estimate collision risk using orbital uncertainty.
+- Determine a suitable avoidance manoeuvre.
+- Apply Δv and simulate the modified trajectory.
+- Evaluate collision avoidance success, trajectory deviation and manoeuvre effort.
 
-- **CARTOSAT-3** — NORAD ID 44804
-- **PSLV R/B (Rocket Body)** — NORAD ID 44805
+## System Architecture
 
-> PSLV R/B is a rocket body and is not classified as fragmentation debris.
+| Component | Responsibility |
+|---|---|
+| Unreal Engine 5 | 3D orbital environment and visualization |
+| Orbital Dynamics | Orbit propagation and physical calculations |
+| Python / ML | Risk prediction and manoeuvre decision-making |
+| Data Bridge | Communication between simulation and ML service |
 
-## Deliverables
+## Mathematical Model
 
-### D1 — Conjunction Assessment Prototype
+**1. Gravitational Acceleration**
 
-D1 implements the complete analysis pipeline:
+\[
+a=-\frac{\mu r}{|r|^3}
+\]
 
-1. Load orbital data from TLE records.
-2. Propagate satellite states using **SGP4**.
-3. Generate synchronized position and velocity data.
-4. Calculate relative position, relative velocity, separation distance, and closest approach.
-5. Classify proximity risk.
-6. Provide 2D and 3D visualization.
-7. Provide an interactive web dashboard.
-8. Validate close-approach detection using a controlled synthetic scenario.
+**2. Orbital Velocity**
 
-### D2 — Autonomous Maneuver Planning
+\[
+v=\sqrt{\frac{\mu}{r}}
+\]
 
-D2 is the planned extension of the system toward autonomous collision-avoidance maneuver planning.
+**3. Orbital Period**
 
-The D1 outputs provide the orbital state and encounter information required as inputs for future maneuver analysis.
+\[
+T=2\pi\sqrt{\frac{r^3}{\mu}}
+\]
+
+**4. Relative Position and Velocity**
+
+\[
+r_{rel}=r_2-r_1
+\]
+
+\[
+v_{rel}=v_2-v_1
+\]
+
+**5. Closest Approach Time**
+
+\[
+t_{CPA}=-\frac{r_{rel}\cdot v_{rel}}{v_{rel}\cdot v_{rel}}
+\]
+
+**6. Manoeuvre Velocity Change**
+
+\[
+\Delta v=\int a_{thrust}(t)\,dt
+\]
+
+Numerical orbit propagation uses the Runge-Kutta 4 (RK4) method as the initial integration approach.
 
 ## Data Sources
 
-Orbital data is stored in:
+- **Synthetic orbital objects:** Initial controlled simulation scenarios.
+- **NASA CARA:** Conjunction assessment and collision avoidance references.
+- **ESA Space Debris Office:** Potential supplementary debris environment data.
+- **Orekit:** Astrodynamics reference for orbital propagation and force models.
+- **NASA/JPL:** Orbital and Earth-related reference constants.
+
+Specific external datasets will be documented when incorporated into the implementation.
+
+## Simulation Outputs
+
+- Satellite and debris trajectories.
+- Time of Closest Approach (TCA).
+- Minimum miss distance.
+- Relative encounter velocity.
+- Collision-risk assessment.
+- Pre- and post-manoeuvre trajectories.
+- Δv and manoeuvre effort.
+- Collision avoidance performance metrics.
+
+## Repository Structure
 
 ```text
-data/orbital_data.txt
+SatelliteAntiCollision/
+├── README.md
+├── UnrealProject/
+├── DynamicsService/
+├── MLService/
+├── Scenarios/
+├── Datasets/
+└── Results/
+```
+
+## Scope
+
+This is an educational and research prototype. It is not operational spacecraft flight software. Orbital calculations, collision-risk methods and manoeuvre models require independent validation.
