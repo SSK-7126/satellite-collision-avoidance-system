@@ -12,16 +12,25 @@ ASatelliteActor::ASatelliteActor()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMeshFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeMeshFinder(TEXT("/Engine/BasicShapes/Cone.Cone"));
 
+	// 0. Scientific Origin Root
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	RootComponent = SceneRoot;
+
+	// 0. Visual Mesh Root (scaled independently of scientific center)
+	VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
+	VisualRoot->SetupAttachment(RootComponent);
+	VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
+
 	// 1. Central Bus
 	SatelliteBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SatelliteBody"));
-	RootComponent = SatelliteBody;
+	SatelliteBody->SetupAttachment(VisualRoot);
 	SatelliteBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { SatelliteBody->SetStaticMesh(CubeMeshFinder.Object); }
 	SatelliteBody->SetRelativeScale3D(FVector(2.0, 2.0, 2.2));
 
 	// 2. Payload Deck
 	PayloadDeck = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PayloadDeck"));
-	PayloadDeck->SetupAttachment(RootComponent);
+	PayloadDeck->SetupAttachment(VisualRoot);
 	PayloadDeck->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { PayloadDeck->SetStaticMesh(CubeMeshFinder.Object); }
 	PayloadDeck->SetRelativeLocation(FVector(0.0, 0.0, 115.0));
@@ -37,7 +46,7 @@ ASatelliteActor::ASatelliteActor()
 
 	// 4. Main Thruster Nozzle
 	ThrusterNozzle = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ThrusterNozzle"));
-	ThrusterNozzle->SetupAttachment(RootComponent);
+	ThrusterNozzle->SetupAttachment(VisualRoot);
 	ThrusterNozzle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (ConeMeshFinder.Succeeded()) { ThrusterNozzle->SetStaticMesh(ConeMeshFinder.Object); }
 	ThrusterNozzle->SetRelativeLocation(FVector(-105.0, 0.0, 0.0));
@@ -46,7 +55,7 @@ ASatelliteActor::ASatelliteActor()
 
 	// 5. High-Gain Antenna Mast & Dish
 	AntennaMast = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AntennaMast"));
-	AntennaMast->SetupAttachment(RootComponent);
+	AntennaMast->SetupAttachment(VisualRoot);
 	AntennaMast->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylinderMeshFinder.Succeeded()) { AntennaMast->SetStaticMesh(CylinderMeshFinder.Object); }
 	AntennaMast->SetRelativeLocation(FVector(65.0, 65.0, 115.0));
@@ -63,7 +72,7 @@ ASatelliteActor::ASatelliteActor()
 
 	// 6. Left Solar Array (Yoke + Segmented Panels)
 	SolarYokeLeft = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SolarYokeLeft"));
-	SolarYokeLeft->SetupAttachment(RootComponent);
+	SolarYokeLeft->SetupAttachment(VisualRoot);
 	SolarYokeLeft->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylinderMeshFinder.Succeeded()) { SolarYokeLeft->SetStaticMesh(CylinderMeshFinder.Object); }
 	SolarYokeLeft->SetRelativeLocation(FVector(0.0, -145.0, 0.0));
@@ -71,14 +80,14 @@ ASatelliteActor::ASatelliteActor()
 	SolarYokeLeft->SetRelativeScale3D(FVector(0.18, 0.18, 0.9));
 
 	SolarPanelLeft = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SolarPanelLeft"));
-	SolarPanelLeft->SetupAttachment(RootComponent);
+	SolarPanelLeft->SetupAttachment(VisualRoot);
 	SolarPanelLeft->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { SolarPanelLeft->SetStaticMesh(CubeMeshFinder.Object); }
 	SolarPanelLeft->SetRelativeLocation(FVector(0.0, -290.0, 0.0));
 	SolarPanelLeft->SetRelativeScale3D(FVector(1.5, 1.8, 0.08));
 
 	SolarPanelLeft_Outboard = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SolarPanelLeft_Outboard"));
-	SolarPanelLeft_Outboard->SetupAttachment(RootComponent);
+	SolarPanelLeft_Outboard->SetupAttachment(VisualRoot);
 	SolarPanelLeft_Outboard->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { SolarPanelLeft_Outboard->SetStaticMesh(CubeMeshFinder.Object); }
 	SolarPanelLeft_Outboard->SetRelativeLocation(FVector(0.0, -490.0, 0.0));
@@ -86,7 +95,7 @@ ASatelliteActor::ASatelliteActor()
 
 	// 7. Right Solar Array (Yoke + Segmented Panels)
 	SolarYokeRight = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SolarYokeRight"));
-	SolarYokeRight->SetupAttachment(RootComponent);
+	SolarYokeRight->SetupAttachment(VisualRoot);
 	SolarYokeRight->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylinderMeshFinder.Succeeded()) { SolarYokeRight->SetStaticMesh(CylinderMeshFinder.Object); }
 	SolarYokeRight->SetRelativeLocation(FVector(0.0, 145.0, 0.0));
@@ -94,14 +103,14 @@ ASatelliteActor::ASatelliteActor()
 	SolarYokeRight->SetRelativeScale3D(FVector(0.18, 0.18, 0.9));
 
 	SolarPanelRight = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SolarPanelRight"));
-	SolarPanelRight->SetupAttachment(RootComponent);
+	SolarPanelRight->SetupAttachment(VisualRoot);
 	SolarPanelRight->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { SolarPanelRight->SetStaticMesh(CubeMeshFinder.Object); }
 	SolarPanelRight->SetRelativeLocation(FVector(0.0, 290.0, 0.0));
 	SolarPanelRight->SetRelativeScale3D(FVector(1.5, 1.8, 0.08));
 
 	SolarPanelRight_Outboard = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SolarPanelRight_Outboard"));
-	SolarPanelRight_Outboard->SetupAttachment(RootComponent);
+	SolarPanelRight_Outboard->SetupAttachment(VisualRoot);
 	SolarPanelRight_Outboard->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { SolarPanelRight_Outboard->SetStaticMesh(CubeMeshFinder.Object); }
 	SolarPanelRight_Outboard->SetRelativeLocation(FVector(0.0, 490.0, 0.0));
@@ -111,6 +120,28 @@ ASatelliteActor::ASatelliteActor()
 void ASatelliteActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+
+	SetActorScale3D(FVector(1.0, 1.0, 1.0));
+	if (SceneRoot)
+	{
+		SceneRoot->SetRelativeScale3D(FVector(1.0, 1.0, 1.0));
+	}
+
+	if (VisualRoot)
+	{
+		if (VisualRoot->GetAttachParent() != RootComponent)
+		{
+			VisualRoot->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			VisualRoot->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+		}
+		VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
+	}
+
+	if (SatelliteBody && VisualRoot && SatelliteBody->GetAttachParent() != VisualRoot)
+	{
+		SatelliteBody->AttachToComponent(VisualRoot, FAttachmentTransformRules::KeepRelativeTransform);
+		SatelliteBody->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+	}
 
 	UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
 	UStaticMesh* CylMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -146,6 +177,29 @@ void ASatelliteActor::OnConstruction(const FTransform& Transform)
 void ASatelliteActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SetActorScale3D(FVector(1.0, 1.0, 1.0));
+	if (SceneRoot)
+	{
+		SceneRoot->SetRelativeScale3D(FVector(1.0, 1.0, 1.0));
+	}
+
+	if (VisualRoot)
+	{
+		if (VisualRoot->GetAttachParent() != RootComponent)
+		{
+			VisualRoot->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			VisualRoot->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+		}
+		VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
+	}
+
+	if (SatelliteBody && VisualRoot && SatelliteBody->GetAttachParent() != VisualRoot)
+	{
+		SatelliteBody->AttachToComponent(VisualRoot, FAttachmentTransformRules::KeepRelativeTransform);
+		SatelliteBody->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+	}
+
 	ApplySatelliteMaterials();
 }
 
