@@ -13,6 +13,18 @@ class SATELLITEAVOIDANCE_API ADebrisActor : public AActor
 public:
 	ADebrisActor();
 
+	// Scene Root representing exact scientific center
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USceneComponent* SceneRoot;
+
+	// Visual Root holding all meshes for independent scaling
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	USceneComponent* VisualRoot;
+
+	// Independent visual scale factor for debris meshes (does not alter scientific position)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual Scaling")
+	float VisualMeshScale = 0.40f;
+
 	// Primary irregular jagged fragment core
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* DebrisMesh;

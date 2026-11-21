@@ -12,9 +12,18 @@ ADebrisActor::ADebrisActor()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMeshFinder(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylMeshFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 
+	// 0. Scientific Origin Root
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
+	RootComponent = SceneRoot;
+
+	// 0. Visual Mesh Root (scaled independently of scientific center)
+	VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
+	VisualRoot->SetupAttachment(RootComponent);
+	VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
+
 	// 1. Primary irregular jagged core
 	DebrisMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DebrisMesh"));
-	RootComponent = DebrisMesh;
+	DebrisMesh->SetupAttachment(VisualRoot);
 	DebrisMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (ConeMeshFinder.Succeeded()) { DebrisMesh->SetStaticMesh(ConeMeshFinder.Object); }
 	DebrisMesh->SetRelativeScale3D(FVector(2.2, 1.6, 2.4));
@@ -22,7 +31,7 @@ ADebrisActor::ADebrisActor()
 
 	// 2. Secondary Shard A (Angled facet)
 	FragmentShardA = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FragmentShardA"));
-	FragmentShardA->SetupAttachment(RootComponent);
+	FragmentShardA->SetupAttachment(VisualRoot);
 	FragmentShardA->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { FragmentShardA->SetStaticMesh(CubeMeshFinder.Object); }
 	FragmentShardA->SetRelativeLocation(FVector(30.0, -40.0, 30.0));
@@ -31,7 +40,7 @@ ADebrisActor::ADebrisActor()
 
 	// 3. Secondary Shard B (Jagged plate)
 	FragmentShardB = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FragmentShardB"));
-	FragmentShardB->SetupAttachment(RootComponent);
+	FragmentShardB->SetupAttachment(VisualRoot);
 	FragmentShardB->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CubeMeshFinder.Succeeded()) { FragmentShardB->SetStaticMesh(CubeMeshFinder.Object); }
 	FragmentShardB->SetRelativeLocation(FVector(-35.0, 30.0, -20.0));
@@ -40,7 +49,7 @@ ADebrisActor::ADebrisActor()
 
 	// 4. Torn Structural Strut
 	TornStrut = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TornStrut"));
-	TornStrut->SetupAttachment(RootComponent);
+	TornStrut->SetupAttachment(VisualRoot);
 	TornStrut->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylMeshFinder.Succeeded()) { TornStrut->SetStaticMesh(CylMeshFinder.Object); }
 	TornStrut->SetRelativeLocation(FVector(15.0, 20.0, 70.0));
@@ -51,6 +60,28 @@ ADebrisActor::ADebrisActor()
 void ADebrisActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+
+	SetActorScale3D(FVector(1.0, 1.0, 1.0));
+	if (SceneRoot)
+	{
+		SceneRoot->SetRelativeScale3D(FVector(1.0, 1.0, 1.0));
+	}
+
+	if (VisualRoot)
+	{
+		if (VisualRoot->GetAttachParent() != RootComponent)
+		{
+			VisualRoot->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			VisualRoot->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+		}
+		VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
+	}
+
+	if (DebrisMesh && VisualRoot && DebrisMesh->GetAttachParent() != VisualRoot)
+	{
+		DebrisMesh->AttachToComponent(VisualRoot, FAttachmentTransformRules::KeepRelativeTransform);
+		DebrisMesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+	}
 
 	UStaticMesh* ConeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cone.Cone"));
 	UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
@@ -67,6 +98,29 @@ void ADebrisActor::OnConstruction(const FTransform& Transform)
 void ADebrisActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SetActorScale3D(FVector(1.0, 1.0, 1.0));
+	if (SceneRoot)
+	{
+		SceneRoot->SetRelativeScale3D(FVector(1.0, 1.0, 1.0));
+	}
+
+	if (VisualRoot)
+	{
+		if (VisualRoot->GetAttachParent() != RootComponent)
+		{
+			VisualRoot->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+			VisualRoot->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+		}
+		VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
+	}
+
+	if (DebrisMesh && VisualRoot && DebrisMesh->GetAttachParent() != VisualRoot)
+	{
+		DebrisMesh->AttachToComponent(VisualRoot, FAttachmentTransformRules::KeepRelativeTransform);
+		DebrisMesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+	}
+
 	ApplyDebrisMaterials();
 }
 

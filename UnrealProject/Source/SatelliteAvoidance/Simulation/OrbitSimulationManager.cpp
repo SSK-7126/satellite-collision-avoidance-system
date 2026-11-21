@@ -133,6 +133,13 @@ void AOrbitSimulationManager::BeginPlay()
 			}
 		}
 
+		// Suppress engine on-screen warnings (e.g. Lumen Distance Fields, Rebuild Lighting)
+		if (GEngine && GetWorld())
+		{
+			GEngine->Exec(GetWorld(), TEXT("DisableAllScreenMessages"));
+			GEngine->Exec(GetWorld(), TEXT("r.Lumen.WarnAboutMissingDistanceFields 0"));
+		}
+
 		// Setup interactive player keyboard controls
 		SetupPlayerInput();
 	}
@@ -280,6 +287,67 @@ void AOrbitSimulationManager::Tick(float DeltaTime)
 	if (DebrisActor)
 	{
 		DebrisActor->SetActorLocation(DebPos);
+	}
+
+	// Evaluate milestone demonstration step dynamically based on simulation time
+	if (DataBridge && DataBridge->DemonstrationSequence.Num() > 0)
+	{
+		int32 NewStepIndex = 1;
+		for (int32 i = DataBridge->DemonstrationSequence.Num() - 1; i >= 0; --i)
+		{
+			if (CurrentSimulationTime >= (DataBridge->DemonstrationSequence[i].SimulationTimeSec - 0.05))
+			{
+				NewStepIndex = DataBridge->DemonstrationSequence[i].StepIndex;
+				break;
+			}
+		}
+
+		if (NewStepIndex != CurrentStepIndex)
+		{
+			CurrentStepIndex = NewStepIndex;
+			const int32 ClampedIdx = CurrentStepIndex - 1;
+			const FDemonstrationStep& Step = DataBridge->DemonstrationSequence[ClampedIdx];
+			if (AvoidanceWidget)
+			{
+				AvoidanceWidget->CurrentMilestoneHeadline = FString::Printf(TEXT("Step %d / %d: %s"), Step.StepIndex, DataBridge->DemonstrationSequence.Num(), *Step.Headline);
+			}
+			OnStepTriggered.Broadcast(Step);
+		}
+	}
+
+	// Dynamic overview camera tracking relative to encounter midpoint
+	if (OverviewCamera)
+	{
+		const FVector Midpoint = (SatPos + DebPos) * 0.5f;
+
+		// Local radial direction from Earth center (XY plane)
+		FVector RadialDir = FVector(Midpoint.X, Midpoint.Y, 0.0f).GetSafeNormal();
+		if (RadialDir.IsNearlyZero())
+		{
+			RadialDir = FVector(1.0f, 0.0f, 0.0f);
+		}
+
+		// Tangential velocity direction
+		FVector VelocityDir = (SatPosNext - SatPos);
+		VelocityDir.Z = 0.0f;
+		VelocityDir = VelocityDir.GetSafeNormal();
+		if (VelocityDir.IsNearlyZero())
+		{
+			VelocityDir = FVector(-RadialDir.Y, RadialDir.X, 0.0f);
+		}
+
+		const FVector NormalDir = FVector(0.0f, 0.0f, 1.0f);
+
+		// Frame camera at elevated flank vantage:
+		// RadialDir * 300.0f keeps camera slightly outside orbit so Earth forms a graceful background limb
+		// -VelocityDir * 870.0f places camera trailing the objects so they are in front
+		// NormalDir * 750.0f elevates camera for clear 3D perspective
+		const FVector DesiredCamPos = Midpoint + (RadialDir * 300.0f) - (VelocityDir * 870.0f) + (NormalDir * 750.0f);
+		const FVector LookTarget = Midpoint + (VelocityDir * 30.0f);
+
+		OverviewCamera->SetActorLocation(DesiredCamPos);
+		const FRotator DesiredRot = FRotationMatrix::MakeFromX(LookTarget - DesiredCamPos).Rotator();
+		OverviewCamera->SetActorRotation(DesiredRot);
 	}
 
 	// Update Telemetry HUD

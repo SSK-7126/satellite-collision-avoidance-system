@@ -84,7 +84,7 @@ void AOrbitPathActor::BuildSplineMeshGeometry()
 		{
 			DynMat->SetVectorParameterValue(TEXT("Color"), PathColor);
 			DynMat->SetVectorParameterValue(TEXT("BaseColor"), PathColor);
-			DynMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 1.2f);
+			DynMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 0.35f);
 		}
 	}
 
@@ -103,6 +103,7 @@ void AOrbitPathActor::BuildSplineMeshGeometry()
 		{
 			SplineMesh->SetMobility(EComponentMobility::Movable);
 			SplineMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			SplineMesh->SetCastShadow(false);
 			SplineMesh->SetStaticMesh(CylinderMesh);
 			SplineMesh->SetForwardAxis(ESplineMeshAxis::Z);
 			SplineMesh->SetStartScale(FVector2D(RadiusScale, RadiusScale));
