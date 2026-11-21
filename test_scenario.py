@@ -380,11 +380,12 @@ def update(frame):
 # START
 # =========================================================
 
-animation = FuncAnimation(
-    fig,
-    update,
-    interval=UPDATE_INTERVAL,
-    blit=False
-)
+if __name__ == "__main__":
+    animation = FuncAnimation(
+        fig,
+        update,
+        interval=UPDATE_INTERVAL,
+        blit=False
+    )
 
-plt.show()
+    plt.show()
