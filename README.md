@@ -1,19 +1,45 @@
-# Autonomous Satellite Collision Avoidance System (ICPS)
+# Satellite Anti-Collision System (ICPS)
+### Autonomous Satellite Collision Avoidance System
 
 [![Regression Tests](https://img.shields.io/badge/D2%20Pytest-39%2F39%20Passed-brightgreen)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/D2/tests)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.7.4-blue)](https://www.unrealengine.com/)
 [![Astrodynamics Solvers](https://img.shields.io/badge/Backend-Python%20RK4%20%7C%20Foster%20(1992)-orange)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/D2/)
 [![Milestone](https://img.shields.io/badge/Milestone-4%20Final%20QC%20Approved-success)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/)
 
-A research-grade software system and physics-synchronized 3D visualization platform for autonomous conjunction assessment, risk screening, collision probability evaluation, and impulsive avoidance manoeuvre planning in Low Earth Orbit (LEO).
+A computational simulation and physics-synchronized 3D visualization platform designed to model orbital debris, detect potential satellite close approaches, evaluate collision risk, and simulate autonomous collision-avoidance manoeuvres in Low Earth Orbit (LEO).
 
 Developed under the Autonomous Satellite Collision Avoidance System project (ICPS), pairing authoritative Python astrodynamics backends with real-time, telemetry-driven Unreal Engine 5.7.4 visualization.
 
 ---
 
-## 1. System Architecture
+## 1. Project Deliverables
 
-The project decouples astrodynamic computation from real-time visualization:
+### D1 — Orbital Environment Simulation & Conjunction Assessment
+- Model a protected primary satellite (CARTOSAT-3) and uncooperative space debris objects.
+- Simulate orbital motion using two-body gravitational dynamics and SGP4 TLE propagation.
+- Generate and visualize synchronized orbital trajectories.
+- Calculate relative position, relative velocity, separation distance, and closest approach.
+- Provide 2D/3D visualization and interactive telemetry dashboards.
+
+### D2 — Autonomous Collision Avoidance & Manoeuvre Planning
+- Detect potential close approaches between satellites and debris using broad-phase screening ($25.0\text{ km}$).
+- Calculate Time of Closest Approach (TCA) and minimum miss distance.
+- Estimate collision risk and collision probability ($P_c$) via 2D encounter plane integration (Foster, 1992) and state covariance propagation.
+- Autonomous candidate manoeuvre generation and multi-criteria optimization in the local orbital RTN frame.
+- Apply impulsive $\Delta \mathbf{v}$ and simulate the post-manoeuvre modified trajectory.
+- Quantitatively evaluate miss distance improvement, TCA shift, collision risk attenuation, trajectory deviation, and control effort.
+
+---
+
+## 2. System Architecture
+
+| Component | Technology | Responsibility |
+| :--- | :--- | :--- |
+| **Scientific Astrodynamics** | Python (NumPy, SciPy) | Numerical RK4 propagation, two-body equations of motion, covariance propagation |
+| **Conjunction & Collision Risk** | Python D1/D2 Solvers | Numerical TCA detection, Foster (1992) probability solver, screening filters |
+| **Manoeuvre Planner** | Python Optimization Engine | Discrete RTN candidate generation, multi-criteria ranking, Delta-V optimization |
+| **Data Bridge** | JSON Contract (`unreal_simulation_payload.json`) | Versioned data contract serializing 8 milestone epochs, full trajectories, and telemetry |
+| **Visualization & Telemetry** | Unreal Engine 5.7.4 (C++ / UMG) | Physics-synchronized 3D rendering, interactive HUD telemetry, 8 milestone cameras |
 
 ```
 +---------------------------------------------------------------------------------+
@@ -48,7 +74,33 @@ The project decouples astrodynamic computation from real-time visualization:
 
 ---
 
-## 2. Key Scenario Parameters & Evaluation Results
+## 3. Mathematical Model
+
+The authoritative astrodynamic backends implement the following equations of motion:
+
+1. **Two-Body Gravitational Acceleration**
+   $$\mathbf{a} = -\frac{\mu \mathbf{r}}{\|\mathbf{r}\|^3}$$
+   where $\mu = 3.986004418 \times 10^{14}\text{ m}^3/\text{s}^2$ (standard Earth gravitational parameter).
+
+2. **Circular Orbital Velocity & Period**
+   $$v = \sqrt{\frac{\mu}{r}}, \qquad T = 2\pi \sqrt{\frac{r^3}{\mu}}$$
+
+3. **Relative Encounter State & Closest Approach (TCA)**
+   $$\mathbf{r}_{\text{rel}}(t) = \mathbf{r}_{\text{sec}}(t) - \mathbf{r}_{\text{sat}}(t), \qquad \mathbf{v}_{\text{rel}}(t) = \mathbf{v}_{\text{sec}}(t) - \mathbf{v}_{\text{sat}}(t)$$
+   At the epoch of closest approach, the range rate vanishes:
+   $$\dot{d}(t_{\text{TCA}}) = \frac{\mathbf{r}_{\text{rel}}(t_{\text{TCA}}) \cdot \mathbf{v}_{\text{rel}}(t_{\text{TCA}})}{\|\mathbf{r}_{\text{rel}}(t_{\text{TCA}})\|} = 0$$
+
+4. **Collision Probability ($P_c$) Evaluation (Foster, 1992)**
+   Projecting the relative covariance $\mathbf{C}_{\text{enc}}$ onto the 2D encounter plane normal to $\mathbf{v}_{\text{rel}}$:
+   $$P_c = \frac{1}{2\pi \sigma_x \sigma_y \sqrt{1 - \rho_{xy}^2}} \iint_{\|\mathbf{r}\| \le R_{\text{HBR}}} \exp\left( -\frac{1}{2(1-\rho_{xy}^2)} \left[ \frac{(x-x_0)^2}{\sigma_x^2} - \frac{2\rho_{xy}(x-x_0)(y-y_0)}{\sigma_x \sigma_y} + \frac{(y-y_0)^2}{\sigma_y^2} \right] \right) dx\,dy$$
+
+5. **Impulsive Avoidance Velocity Increment**
+   $$\Delta \mathbf{v} = \mathbf{v}(t_{\text{burn}}^+) - \mathbf{v}(t_{\text{burn}}^-)$$
+   Numerical orbit propagation utilizes a fourth-order Runge-Kutta (RK4) integrator.
+
+---
+
+## 4. Key Scenario Parameters & Evaluation Results
 
 The reference scenario models a close approach in a circular Low Earth Orbit ($r_0 = 7000.0\text{ km}$, altitude $h \approx 621.9\text{ km}$, speed $v_0 = 7546.05\text{ m/s}$):
 - **Protected Primary Satellite**: CARTOSAT-3 (`PROTECTED_SAT`, Payload01 bus)
@@ -82,7 +134,26 @@ The applied avoidance manoeuvre is an impulsive burn of $\Delta v = 3.00\text{ m
 
 ---
 
-## 3. Project Deliverables
+## 5. Data Sources & Simulation Outputs
+
+### Reference Astrodynamics & Data Sources
+- **Synthetic Orbital Objects**: Controlled encounter baseline scenario in circular LEO.
+- **TLE Records**: Space object tracking data (`data/orbital_data.txt`, CARTOSAT-3 NORAD ID 44804, PSLV R/B NORAD ID 44805).
+- **NASA CARA**: Conjunction assessment, 2D encounter plane integration standards, and safety clearance thresholds.
+- **ESA Space Debris Office / IADC**: Space debris environment modeling conventions and operational screening guidelines.
+- **NASA/JPL**: Physical constants (WGS84 Earth equatorial radius $R_E = 6378137.0\text{ m}$, $\mu = 398600.4418\text{ km}^3/\text{s}^2$).
+
+### Primary Simulation Outputs
+- Complete 3D satellite and debris trajectory states (nominal and modified).
+- Time of Closest Approach (TCA) and relative separation distance series.
+- 2D encounter plane geometry and Mahalanobis distance.
+- Pre- and post-manoeuvre collision probabilities ($P_c$) with asymptotic underflow preservation.
+- Optimal impulsive $\Delta \mathbf{v}$ vector in RTN and ECI frames.
+- Quantitative collision avoidance evaluation metrics and trajectory deviation profiles.
+
+---
+
+## 6. Project Deliverables & Reproduction Guide
 
 All authoritative final deliverables for Milestone 4 and the Quality Control pass are archived in `Project_Deliverables/Final_Milestone/`:
 
@@ -94,6 +165,7 @@ All authoritative final deliverables for Milestone 4 and the Quality Control pas
 | **Demonstration Script** | Narration script, scene breakdown, camera rigging specs | [Final_Demonstration_Script.md](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/Final_Demonstration_Script.md) |
 | **Simulation Results JSON** | Machine-readable quantitative evaluation metrics | [Simulation_Results.json](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/Simulation_Results.json) |
 | **Quality Review Report** | Detailed QC audit report, phrase corrections, and limitations | [FINAL_QUALITY_REVIEW.md](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/FINAL_QUALITY_REVIEW.md) |
+| **Performance Evaluation (Excel)** | Multi-sheet workbook with trajectory time-series | [Performance_Evaluation.xlsx](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/Performance_Evaluation.xlsx) |
 | **Performance Charts** | High-resolution publication plots (6 figures) | [Performance_Charts/](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/Performance_Charts/) |
 
 ### Demonstration Video Specifications
@@ -104,28 +176,70 @@ All authoritative final deliverables for Milestone 4 and the Quality Control pas
 - **Codec**: H.264 / AAC
 - **File Size**: ~5.76 MB (6,044,828 bytes)
 
----
+### Reproduction Instructions
 
-## 4. Verification & Regression Testing
-
-The D2 scientific test suite verifies numerical propagation, coordinate transformations, covariance mapping, collision probability solvers, and payload generation.
-
-To run the regression suite in headless mode:
-
+#### A. Run D2 Scientific Regression Test Suite
+Verify that all 39 astrodynamics unit tests pass:
 ```powershell
 $env:MPLBACKEND="Agg"
 python -m pytest D2/tests -v --tb=short
 ```
 
-**Verification Status**: **39 passed** in ~30 seconds (100% pass rate, zero failures, zero regressions).
+#### B. Re-generate Performance Charts, Excel & CSV Tables
+```powershell
+python generate_milestone4_evaluation.py
+```
 
-### Deliverable Recompilation
-- **Technical Report PDF**: `python build_technical_report_pdf.py`
-- **Demonstration Video**: `python build_demonstration_video.py`
+#### C. Re-compile Technical Report PDF
+```powershell
+python build_technical_report_pdf.py
+```
+
+#### D. Re-render Demonstration Video
+```powershell
+python build_demonstration_video.py
+```
+
+#### E. Run In-Engine Interactive Validation in Unreal Engine 5.7
+```powershell
+& "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "c:\Users\Sriram Krovi\satellite-collision-avoidance-system\UnrealProject\SatelliteAvoidance.uproject" -ExecutePythonScript="c:\Users\Sriram Krovi\satellite-collision-avoidance-system\UnrealProject\Scripts\verify_milestone3_fixes.py" -stdout -unattended -nopause -nosplash
+```
 
 ---
 
-## 5. Scope & Limitations (Non-Flight-Readiness Statement)
+## 7. Repository Structure
+
+```text
+satellite-collision-avoidance-system/
+├── README.md                                    # Master repository documentation
+├── .gitignore                                   # Git ignore rules for Unreal & Python
+├── test_scenario.py                             # Controlled scenario runner
+├── build_technical_report_pdf.py                # Deliverable PDF report compiler
+├── build_demonstration_video.py                 # 44-second demonstration video generator
+├── generate_milestone4_evaluation.py            # Evaluation metrics and chart generator
+├── D1/                                          # Deliverable 1: Conjunction assessment prototype
+│   ├── day1_pipeline.py                         # D1 pipeline execution
+│   ├── propagator.py                            # SGP4 orbit propagation
+│   └── relative_motion.py                       # Relative distance and closest approach
+├── D2/                                          # Deliverable 2: Autonomous avoidance manoeuvre planning
+│   ├── conjunction/                             # TCA and screening modules
+│   ├── dynamics/                                # Two-body gravity, RK4 integrator, variational STM
+│   ├── manoeuvres/                              # Avoidance pipeline, candidate generator, optimizer
+│   ├── uncertainty/                             # Covariance propagation, Foster (1992) Pc solver
+│   ├── visualization/                           # Unreal coordinate transform, JSON simulation payload
+│   └── tests/                                   # Automated test suite (39 pytest unit tests)
+├── Project_Deliverables/                        # Authoritative milestone deliverables
+│   └── Final_Milestone/                         # Milestone 4 reports, video, charts, and datasets
+└── UnrealProject/                               # Unreal Engine 5.7.4 visualization project
+    ├── Config/                                  # Project engine and game configuration
+    ├── Content/                                 # Materials, textures, Earth assets, scenario maps
+    ├── Source/SatelliteAvoidance/               # C++ actors, data bridge, HUD widget, visualizers
+    └── Scripts/                                 # Headless Python automation & verification scripts
+```
+
+---
+
+## 8. Scope & Limitations (Non-Flight-Readiness Statement)
 
 > [!CAUTION]
 > **Research and Simulation Prototype Disclaimer**:
