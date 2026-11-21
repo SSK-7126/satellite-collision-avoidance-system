@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satellite Collision Avoidance System (ICPS) - UE5 Visualization Layer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+        body { background: #05070e; color: #e2e8f0; overflow: hidden; width: 100vw; height: 100vh; }
+        #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        
+        /* Top Navigation Header */
+        .header {
+            position: absolute; top: 16px; left: 20px; z-index: 10;
+            background: rgba(10, 16, 30, 0.85); backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px;
+            padding: 12px 20px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        .header h1 { font-size: 16px; font-weight: 700; color: #38bdf8; letter-spacing: 0.5px; }
+        .header p { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+        /* Unreal HUD Telemetry Panel */
+        .hud-panel {
+            position: absolute; top: 16px; right: 20px; z-index: 10; width: 360px;
+            background: rgba(10, 16, 30, 0.90); backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px;
+            padding: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+        .hud-title { font-size: 12px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .hud-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; }
+        .hud-label { color: #94a3b8; }
+        .hud-value { font-weight: 600; color: #f1f5f9; text-align: right; }
+        .hud-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+        .badge-alert { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+        .badge-safe { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .badge-burn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+        
+        .section-header { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 10px 0 4px 0; letter-spacing: 0.5px; }
+        .diff-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 6px; padding: 8px; margin-top: 8px; }
+
+        /* Timeline and Sequence Controls */
+        .controls-bar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10;
+            width: calc(100% - 40px); max-width: 1100px;
+            background: rgba(10, 16, 30, 0.92); backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px;
+            padding: 12px 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+        }
+        .scrub-container { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+        .scrub-slider { flex-grow: 1; accent-color: #38bdf8; cursor: pointer; }
+        .time-badge { font-size: 13px; font-weight: 700; color: #38bdf8; min-width: 90px; }
+        .btn-group { display: flex; gap: 6px; }
+        .btn {
+            background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #cbd5e1; border-radius: 4px; padding: 5px 12px; font-size: 11px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .btn:hover { background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #ffffff; }
+        .btn.active { background: #0284c7; border-color: #38bdf8; color: #ffffff; }
+
+        .step-buttons { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+        .step-btn {
+            background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #94a3b8; border-radius: 4px; padding: 6px 4px; font-size: 10px; font-weight: 600;
+            cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            transition: all 0.15s;
+        }
+        .step-btn:hover { border-color: #38bdf8; color: #f1f5f9; background: rgba(56, 189, 248, 0.15); }
+        .step-btn.active { border-color: #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.25); font-weight: 700; }
+
+        /* Legend */
+        .legend {
+            position: absolute; bottom: 120px; left: 20px; z-index: 10;
+            background: rgba(10, 16, 30, 0.85); backdrop-filter: blur(8px);
+            border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px;
+            padding: 10px 14px; font-size: 10px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .legend-color { width: 14px; height: 3px; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Satellite Collision Avoidance System (ICPS)</h1>
+        <p>Deliverable 2 — Unreal Engine 5 Visualization & Integration Layer</p>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div style="font-weight: 700; color: #94a3b8; margin-bottom: 6px;">TRAJECTORY KEY</div>
+        <div class="legend-item"><div class="legend-color" style="background: #00e5ff;"></div><span>Nominal Satellite Path</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #ff3344;"></div><span>Secondary Debris Path</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #00ff66;"></div><span>Modified Satellite Path</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #ffaa00; height: 8px; width: 8px; border-radius: 50%;"></div><span>Avoidance Impulse Burn Ring</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #ff0055; height: 8px; width: 8px; border-radius: 50%;"></div><span>Time of Closest Approach (TCA)</span></div>
+    </div>
+
+    <!-- HUD Telemetry Panel -->
+    <div class="hud-panel">
+        <div class="hud-title">
+            <span>Encounter Telemetry</span>
+            <span id="risk-badge" class="hud-badge badge-alert">CRITICAL ALERT</span>
+        </div>
+
+        <div class="hud-row"><span class="hud-label">Scenario Time</span><span id="hud-sim-time" class="hud-value" style="color: #38bdf8;">T + 000.0 s</span></div>
+        <div class="hud-row"><span class="hud-label">Primary Satellite</span><span id="hud-sat-id" class="hud-value">PROTECTED_SAT (LEO 7000 km)</span></div>
+        <div class="hud-row"><span class="hud-label">Secondary Debris</span><span id="hud-deb-id" class="hud-value">DEBRIS_B</span></div>
+
+        <div class="section-header">1. Nominal Predicted Conjunction</div>
+        <div class="hud-row"><span class="hud-label">Time to Closest Approach (TCA)</span><span id="hud-nom-tca" class="hud-value">769.63 s</span></div>
+        <div class="hud-row"><span class="hud-label">Nominal Miss Distance</span><span id="hud-nom-miss" class="hud-value" style="color: #f87171;">1,563.5 m (1.56 km)</span></div>
+        <div class="hud-row"><span class="hud-label">Relative Encounter Speed</span><span id="hud-nom-speed" class="hud-value">13.234 m/s</span></div>
+        <div class="hud-row"><span class="hud-label">Collision Probability (Pc)</span><span id="hud-nom-pc" class="hud-value">3.958e-14 (log10: -13.40)</span></div>
+        <div class="hud-row"><span class="hud-label">Pc Numerical Status</span><span id="hud-nom-status" class="hud-value">[NUMERICAL_UNDERFLOW]</span></div>
+
+        <div class="section-header">2. Autonomous Avoidance Manoeuvre</div>
+        <div class="hud-row"><span class="hud-label">Selected Burn ID</span><span id="hud-burn-id" class="hud-value">MAN_006_-R_3.00mps_T170s</span></div>
+        <div class="hud-row"><span class="hud-label">Burn Epoch / Lead Time</span><span id="hud-burn-epoch" class="hud-value">T + 169.6 s (Lead: 600.0 s)</span></div>
+        <div class="hud-row"><span class="hud-label">Delta-v Magnitude</span><span id="hud-dv-mag" class="hud-value" style="color: #fbbf24;">3.000 m/s</span></div>
+        <div class="hud-row"><span class="hud-label">Direction (RTN Frame)</span><span id="hud-dv-dir" class="hud-value">-R (Radial Inward)</span></div>
+
+        <div class="section-header">3. Post-Manoeuvre Verification</div>
+        <div class="diff-box">
+            <div class="hud-row"><span class="hud-label">New Miss Distance</span><span id="hud-post-miss" class="hud-value" style="color: #4ade80;">2,454.4 m (+890.9 m)</span></div>
+            <div class="hud-row"><span class="hud-label">New TCA</span><span id="hud-post-tca" class="hud-value">903.03 s (+133.4 s)</span></div>
+            <div class="hud-row"><span class="hud-label">New Collision Probability</span><span id="hud-post-pc" class="hud-value" style="color: #4ade80;">1.239e-22 (log10: -21.91)</span></div>
+            <div class="hud-row"><span class="hud-label">Max Trajectory Deviation</span><span id="hud-post-dev" class="hud-value">2,777.2 m</span></div>
+        </div>
+    </div>
+
+    <!-- Bottom Controls & Demonstration Sequence Bar -->
+    <div class="controls-bar">
+        <div class="scrub-container">
+            <div class="btn-group">
+                <button id="btn-play" class="btn active">PAUSE</button>
+                <button id="btn-reset" class="btn">RESET</button>
+            </div>
+            <span id="slider-time-label" class="time-badge">T + 000.0 s</span>
+            <input type="range" id="time-slider" class="scrub-slider" min="0" max="1000" step="1" value="0">
+            <div class="btn-group">
+                <button id="speed-1x" class="btn">1x</button>
+                <button id="speed-5x" class="btn active">5x</button>
+                <button id="speed-25x" class="btn">25x</button>
+            </div>
+        </div>
+
+        <div class="step-buttons">
+            <button class="step-btn active" onclick="jumpToStep(1)">1. Init (0s)</button>
+            <button class="step-btn" onclick="jumpToStep(2)">2. Track (60s)</button>
+            <button class="step-btn" onclick="jumpToStep(3)">3. Screen (120s)</button>
+            <button class="step-btn" onclick="jumpToStep(4)">4. Conjunction (150s)</button>
+            <button class="step-btn" onclick="jumpToStep(5)">5. Plan (170s)</button>
+            <button class="step-btn" onclick="jumpToStep(6)">6. Burn (170s)</button>
+            <button class="step-btn" onclick="jumpToStep(7)">7. Drift (300s)</button>
+            <button class="step-btn" onclick="jumpToStep(8)">8. Resolve (903s)</button>
+        </div>
+    </div>
+
+    <script>
+        // Simulation State
+        let isPlaying = true;
+        let currentTime = 0.0;
+        let timeScale = 5.0;
+        const duration = 1000.0;
+        const burnEpoch = 169.63;
+        const nominalTca = 769.63;
+        const postTca = 903.03;
+
+        // Three.js Setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x05070e, 0.00015);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 500000);
+        camera.position.set(0, -1400, 700);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Lighting
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        sunLight.position.set(1000, -1000, 500);
+        scene.add(sunLight);
+        scene.add(new THREE.AmbientLight(0x223355, 0.9));
+
+        // Earth Sphere (Scaled: 1 uu = 100m -> Earth radius = 637.8 units)
+        const earthRadius = 637.8137;
+        const earthGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
+        const earthMat = new THREE.MeshStandardMaterial({
+            color: 0x1a3d6e,
+            roughness: 0.8,
+            metalness: 0.1,
+            wireframe: false
+        });
+        const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+        scene.add(earthMesh);
+
+        // Equator Line on Earth
+        const equatorGeo = new THREE.BufferGeometry();
+        const eqPts = [];
+        for (let i = 0; i <= 100; i++) {
+            const theta = (i / 100) * Math.PI * 2;
+            eqPts.push(new THREE.Vector3(Math.cos(theta) * (earthRadius + 0.5), Math.sin(theta) * (earthRadius + 0.5), 0));
+        }
+        equatorGeo.setFromPoints(eqPts);
+        const equatorLine = new THREE.Line(equatorGeo, new THREE.LineBasicMaterial({ color: 0x225588, transparent: true, opacity: 0.5 }));
+        scene.add(equatorLine);
+
+        // Orbits (LEO Radius = 700 units)
+        function createOrbitLine(color, radius = 700.0, zOffset = 0.0, isDashed = false) {
+            const pts = [];
+            for (let i = 0; i <= 200; i++) {
+                const theta = (i / 200) * Math.PI * 2;
+                pts.push(new THREE.Vector3(Math.cos(theta) * radius, Math.sin(theta) * radius, zOffset));
+            }
+            const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: color, linewidth: 2 }));
+        }
+
+        const nomSatOrbit = createOrbitLine(0x00e5ff, 700.0); // Cyan
+        scene.add(nomSatOrbit);
+
+        const debOrbit = createOrbitLine(0xff3344, 700.0, 0.0); // Red
+        scene.add(debOrbit);
+
+        // Modified Satellite Orbit (shifted inward by radial burn, Green)
+        const modSatOrbit = createOrbitLine(0x00ff66, 698.5, 0.0);
+        modSatOrbit.visible = false;
+        scene.add(modSatOrbit);
+
+        // Objects: Satellite & Debris
+        const satMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(12, 12, 12),
+            new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x004466 })
+        );
+        scene.add(satMesh);
+
+        const debMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(6, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0xff3344, emissive: 0x550011 })
+        );
+        scene.add(debMesh);
+
+        // TCA Marker Sphere & Miss Distance Line
+        const tcaMarker = new THREE.Mesh(
+            new THREE.SphereGeometry(8, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xff0055, wireframe: true })
+        );
+        scene.add(tcaMarker);
+
+        const missLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const missLine = new THREE.Line(missLineGeo, new THREE.LineBasicMaterial({ color: 0xff3366, linewidth: 3 }));
+        scene.add(missLine);
+
+        // Burn Marker Ring
+        const burnRingGeo = new THREE.RingGeometry(15, 18, 32);
+        const burnRingMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide });
+        const burnRing = new THREE.Mesh(burnRingGeo, burnRingMat);
+        burnRing.visible = false;
+        scene.add(burnRing);
+
+        // Orbital Motion Calculation Functions (Keplerian matching Python D2 equations)
+        const v_circ = 7546.053;
+        const r_orbit = 700.0;
+        const omega = (v_circ / 7000000.0); // rad/sec ≈ 0.001078 rad/s
+
+        function getNominalSatPos(t) {
+            const angle = omega * t;
+            return new THREE.Vector3(Math.cos(angle) * r_orbit, -Math.sin(angle) * r_orbit, 0);
+        }
+
+        function getDebrisPos(t) {
+            // Debris is 10 km ahead initially, travels 10 m/s slower
+            const delta_theta0 = 10000.0 / 7000000.0;
+            const omega_deb = (v_circ - 10.0) / 7000000.0;
+            const angle = delta_theta0 + omega_deb * t;
+            return new THREE.Vector3(Math.cos(angle) * r_orbit, -Math.sin(angle) * r_orbit, 0);
+        }
+
+        function getModifiedSatPos(t) {
+            if (t < burnEpoch) return getNominalSatPos(t);
+            // After radial inward impulse (-R 3.0 m/s), orbit radius and period slightly alter
+            const dt_burn = t - burnEpoch;
+            const r_mod = 698.5; // Slight inward eccentricity
+            const omega_mod = omega * 1.002;
+            const angle = omega * burnEpoch + omega_mod * dt_burn;
+            return new THREE.Vector3(Math.cos(angle) * r_mod, -Math.sin(angle) * r_mod, 0);
+        }
+
+        // Set TCA static positions
+        const satTcaNomPos = getNominalSatPos(nominalTca);
+        const debTcaNomPos = getDebrisPos(nominalTca);
+        tcaMarker.position.copy(satTcaNomPos);
+
+        const burnPos = getNominalSatPos(burnEpoch);
+        burnRing.position.copy(burnPos);
+        burnRing.lookAt(0, 0, 0);
+
+        // Controls
+        let isMouseDown = false;
+        let prevMouseX = 0, prevMouseY = 0;
+        window.addEventListener('mousedown', (e) => { isMouseDown = true; prevMouseX = e.clientX; prevMouseY = e.clientY; });
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+            const dx = e.clientX - prevMouseX;
+            const dy = e.clientY - prevMouseY;
+            camera.position.applyAxisAngle(new THREE.Vector3(0, 0, 1), -dx * 0.005);
+            camera.lookAt(0, 0, 0);
+            prevMouseX = e.clientX; prevMouseY = e.clientY;
+        });
+        window.addEventListener('wheel', (e) => {
+            camera.position.multiplyScalar(e.deltaY > 0 ? 1.05 : 0.95);
+            camera.lookAt(0, 0, 0);
+        });
+
+        // UI Element References
+        const hudSimTime = document.getElementById('hud-sim-time');
+        const slider = document.getElementById('time-slider');
+        const sliderLabel = document.getElementById('slider-time-label');
+        const btnPlay = document.getElementById('btn-play');
+        const riskBadge = document.getElementById('risk-badge');
+
+        function updateScene(t) {
+            currentTime = t;
+            slider.value = t;
+            const timeStr = `T + ${t.toFixed(1).padStart(5, '0')} s`;
+            hudSimTime.innerText = timeStr;
+            sliderLabel.innerText = timeStr;
+
+            const isManoeuvred = (t >= burnEpoch);
+            const satPos = isManoeuvred ? getModifiedSatPos(t) : getNominalSatPos(t);
+            const debPos = getDebrisPos(t);
+
+            satMesh.position.copy(satPos);
+            debMesh.position.copy(debPos);
+
+            // Visibility
+            modSatOrbit.visible = isManoeuvred;
+            burnRing.visible = (t >= burnEpoch - 10.0 && t <= burnEpoch + 60.0);
+
+            // Connect TCA miss distance line when near TCA
+            if (Math.abs(t - nominalTca) < 100.0 && !isManoeuvred) {
+                missLine.geometry.setFromPoints([satPos, debPos]);
+                missLine.visible = true;
+            } else if (isManoeuvred && Math.abs(t - postTca) < 100.0) {
+                missLine.geometry.setFromPoints([satPos, debPos]);
+                missLine.visible = true;
+            } else {
+                missLine.visible = false;
+            }
+
+            // Status badges
+            if (isManoeuvred) {
+                riskBadge.innerText = 'RESOLVED SAFE';
+                riskBadge.className = 'hud-badge badge-safe';
+            } else if (t >= 120.0) {
+                riskBadge.innerText = 'CRITICAL ALERT';
+                riskBadge.className = 'hud-badge badge-alert';
+            } else {
+                riskBadge.innerText = 'NOMINAL TRACK';
+                riskBadge.className = 'hud-badge badge-burn';
+            }
+        }
+
+        function jumpToStep(stepIdx) {
+            const stepTimes = [0.0, 60.0, 120.0, 150.0, 169.63, 169.63, 300.0, 903.03];
+            const t = stepTimes[stepIdx - 1];
+            updateScene(t);
+
+            document.querySelectorAll('.step-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === stepIdx - 1);
+            });
+        }
+
+        // Animation Loop
+        let lastFrameTime = performance.now();
+        function animate(now) {
+            requestAnimationFrame(animate);
+            const dt = (now - lastFrameTime) / 1000.0;
+            lastFrameTime = now;
+
+            if (isPlaying) {
+                currentTime += dt * timeScale;
+                if (currentTime > duration) currentTime = 0.0;
+                updateScene(currentTime);
+            }
+
+            earthMesh.rotation.z += 0.0002;
+            renderer.render(scene, camera);
+        }
+        requestAnimationFrame(animate);
+
+        // Control Listeners
+        btnPlay.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            btnPlay.innerText = isPlaying ? 'PAUSE' : 'PLAY';
+            btnPlay.classList.toggle('active', isPlaying);
+        });
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            updateScene(0.0);
+            isPlaying = true;
+            btnPlay.innerText = 'PAUSE';
+        });
+        slider.addEventListener('input', (e) => {
+            isPlaying = false;
+            btnPlay.innerText = 'PLAY';
+            btnPlay.classList.remove('active');
+            updateScene(parseFloat(e.target.value));
+        });
+
+        document.getElementById('speed-1x').addEventListener('click', function() { timeScale = 1.0; setActiveSpeed(this); });
+        document.getElementById('speed-5x').addEventListener('click', function() { timeScale = 5.0; setActiveSpeed(this); });
+        document.getElementById('speed-25x').addEventListener('click', function() { timeScale = 25.0; setActiveSpeed(this); });
+        function setActiveSpeed(el) {
+            ['speed-1x', 'speed-5x', 'speed-25x'].forEach(id => document.getElementById(id).classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+

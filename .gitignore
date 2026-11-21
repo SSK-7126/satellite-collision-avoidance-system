@@ -8,3 +8,15 @@ env/
 venv/
 ENV/
 .DS_Store
+
+# Testing and development caches
+.pytest_cache/
+*.log
+
+# Unreal Engine build intermediates, binaries, and caches
+UnrealProject/Binaries/
+UnrealProject/DerivedDataCache/
+UnrealProject/Intermediate/
+UnrealProject/Saved/
+UnrealProject/AutoSDK/
+*.uproject.lock

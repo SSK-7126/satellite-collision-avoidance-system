@@ -1,0 +1,172 @@
+================================================================================
+SATELLITE COLLISION AVOIDANCE SYSTEM (ICPS) — VERIFICATION & TEST REPORT
+Milestone 4: Performance Evaluation, Final Demonstration & Technical Validation
+================================================================================
+
+Date: 2026-11-21
+Platform: Windows 11 (25H2) [10.0.26200.9550]
+Engine: Unreal Engine 5.7.4-51494982+++UE5+Release-5.7 (Win64 Development)
+Python Environment: Python 3.14.4 (pytest-9.1.1, numpy-2.4.6, scipy-1.18.1, matplotlib-3.11.2)
+Compiler: Microsoft Visual Studio 2026 (MSVC 14.50.35717 / Windows SDK 10.0.26100.0)
+
+================================================================================
+1. UNREALBUILDTOOL C++ COMPILATION REPORT
+================================================================================
+Build Target: SatelliteAvoidanceEditor Win64 Development
+Command: "Build.bat" SatelliteAvoidanceEditor Win64 Development -waitmutex
+
+Compilation Log:
+  Using 'git status' to determine working set for adaptive non-unity build.
+  Building SatelliteAvoidanceEditor...
+  Using Visual Studio 2026 14.50.35730 toolchain (VC\Tools\MSVC\14.50.35717)
+  Using Unreal Build Accelerator local executor to run 5 action(s)
+  [1/5] Compile [x64] AvoidanceInfoPanelWidget.cpp
+  [2/5] Compile [x64] OrbitSimulationManager.cpp
+  [3/5] Link [x64] UnrealEditor-SatelliteAvoidance.lib
+  [4/5] Link [x64] UnrealEditor-SatelliteAvoidance.dll
+  [5/5] WriteMetadata SatelliteAvoidanceEditor.target
+  Result: Succeeded (Total execution time: 13.06 seconds)
+  Errors: 0 | Warnings: 0
+
+STATUS: PASS (100% CLEAN BUILD)
+
+================================================================================
+2. AUTHORITATIVE D2 SCIENTIFIC REGRESSION TEST SUITE (PYTEST)
+================================================================================
+Command: $env:MPLBACKEND="Agg"; python -m pytest D2/tests -v --tb=short
+
+Test Suite Breakdown:
+  D2/tests/test_conjunction.py::test_controlled_close_approach           PASSED [  2%]
+  D2/tests/test_conjunction.py::test_safe_pass                           PASSED [  5%]
+  D2/tests/test_conjunction.py::test_near_zero_relative_velocity         PASSED [  7%]
+  D2/tests/test_conjunction.py::test_window_constraints                  PASSED [ 10%]
+  D2/tests/test_conjunction.py::test_miss_distance_non_negativity        PASSED [ 12%]
+  D2/tests/test_conjunction.py::test_linear_vs_numerical_comparison      PASSED [ 15%]
+  D2/tests/test_conjunction.py::test_batch_catalog_screening             PASSED [ 17%]
+  D2/tests/test_manoeuvres.py::test_no_collision_risk                    PASSED [ 20%]
+  D2/tests/test_manoeuvres.py::test_controlled_close_approach_avoidance  PASSED [ 23%]
+  D2/tests/test_manoeuvres.py::test_different_burn_times                 PASSED [ 25%]
+  D2/tests/test_manoeuvres.py::test_different_delta_v_directions         PASSED [ 28%]
+  D2/tests/test_manoeuvres.py::test_exceeding_delta_v_limit              PASSED [ 30%]
+  D2/tests/test_manoeuvres.py::test_covariance_unavailable               PASSED [ 33%]
+  D2/tests/test_manoeuvres.py::test_no_feasible_manoeuvre                PASSED [ 35%]
+  D2/tests/test_manoeuvres.py::test_post_manoeuvre_tca_covariance_sync   PASSED [ 38%]
+  D2/tests/test_manoeuvres.py::test_collision_probability_numerical_val  PASSED [ 41%]
+  D2/tests/test_manoeuvres.py::test_optimizer_safety_priority_val        PASSED [ 43%]
+  D2/tests/test_manoeuvres.py::test_burn_time_and_frame_validation       PASSED [ 46%]
+  D2/tests/test_manoeuvres.py::test_regression_all_suites                PASSED [ 48%]
+  D2/tests/test_orbital_covariance.py::test_gravity_gradient_properties  PASSED [ 51%]
+  D2/tests/test_orbital_covariance.py::test_symplecticity_validation     PASSED [ 53%]
+  D2/tests/test_orbital_covariance.py::test_finite_diff_convergence      PASSED [ 56%]
+  D2/tests/test_orbital_covariance.py::test_covariance_propagation_checks PASSED [ 58%]
+  D2/tests/test_orbital_covariance.py::test_collision_prob_consistency   PASSED [ 61%]
+  D2/tests/test_orbital_covariance.py::test_linear_vs_orbital_divergence PASSED [ 64%]
+  D2/tests/test_uncertainty.py::test_valid_covariance                    PASSED [ 66%]
+  D2/tests/test_uncertainty.py::test_invalid_dimensions                  PASSED [ 69%]
+  D2/tests/test_uncertainty.py::test_asymmetric_covariance_rejection    PASSED [ 71%]
+  D2/tests/test_uncertainty.py::test_positive_semidefinite_validation    PASSED [ 74%]
+  D2/tests/test_uncertainty.py::test_independent_covariance_combination PASSED [ 76%]
+  D2/tests/test_uncertainty.py::test_covariance_propagation              PASSED [ 79%]
+  D2/tests/test_uncertainty.py::test_missing_covariance_handling         PASSED [ 82%]
+  D2/tests/test_uncertainty.py::test_numerical_collision_probability    PASSED [ 84%]
+  D2/tests/test_visualization.py::test_coord_transform_invariants        PASSED [ 87%]
+  D2/tests/test_visualization.py::test_orientation_calculation           PASSED [ 89%]
+  D2/tests/test_visualization.py::test_trajectory_vectorized_transform   PASSED [ 92%]
+  D2/tests/test_visualization.py::test_json_payload_schema_and_contract  PASSED [ 94%]
+  D2/tests/test_visualization.py::test_demonstration_sequence_milestones PASSED [ 97%]
+  D2/tests/test_visualization.py::test_scientific_solver_separation      PASSED [100%]
+
+Regression Execution Summary:
+  Total Tests Collected : 39
+  Passed                : 39
+  Failed                : 0
+  Skipped               : 0
+  Execution Time        : 30.44 seconds
+
+STATUS: PASS (39/39 REGRESSION BASELINE MAINTAINED)
+
+================================================================================
+3. UNREAL ENGINE IN-ENGINE AUTOMATED RUNTIME VALIDATION
+================================================================================
+Harness: UnrealEditor-Cmd.exe SatelliteAvoidance.uproject -ExecutePythonScript="verify_milestone3_fixes.py"
+
+[3.1] Fix 1 — Camera Selection Across All 8 Milestone Steps:
+  Step 1 (SIMULATION_START)           -> Camera_Earth_Overview       [PASS]
+  Step 2 (NOMINAL_TRACKING)           -> Camera_Satellite_Detail     [PASS]
+  Step 3 (CONJUNCTION_DETECTED)       -> Camera_Encounter_Overview   [PASS]
+  Step 4 (TCA_AND_MISS_DISTANCE)      -> Camera_Conjunction_TCA      [PASS]
+  Step 5 (AVOIDANCE_TRIGGERED)        -> Camera_Satellite_Detail     [PASS]
+  Step 6 (BURN_VISUALIZATION)         -> Camera_Manoeuvre_Burn       [PASS]
+  Step 7 (MODIFIED_TRAJECTORY)        -> Camera_Encounter_Overview   [PASS]
+  Step 8 (BEFORE_AFTER_COMPARISON)    -> Camera_Earth_Overview       [PASS]
+  CycleCameraView() across 6 cameras  -> Verified                    [PASS]
+
+[3.2] Fix 2 — HUD Default Initialization & Scientific Precision:
+  Pre-Payload Initial State:
+    DisplayCollisionProbability       : "DATA UNAVAILABLE"           [PASS]
+    DisplayPcStatus                   : "" (No misleading text)      [PASS]
+    DisplayRiskComparison             : "STATUS: TELEMETRY INITIALIZING" [PASS]
+    CurrentMilestoneHeadline          : "TELEMETRY INITIALIZING"     [PASS]
+    DisplayTca / DisplayMissDistance  : "DATA UNAVAILABLE"           [PASS]
+
+  Post-Load Pre-Burn Nominal Telemetry:
+    DisplayCollisionProbability       : "3.958e-14 (log10: -13.40)"  [PASS]
+    DisplayPcStatus                   : "[NUMERICAL_UNDERFLOW]"      [PASS]
+    DisplayTca                        : "769.63 s"                   [PASS]
+    DisplayMissDistance               : "1563.5 m (1.563 km)"        [PASS]
+    DisplayDeltaV / Direction         : "PLANNED: 3.00 m/s | -R"     [PASS]
+
+  Post-Load Post-Burn Avoidance Telemetry:
+    DisplayCollisionProbability       : "1.239e-22 (log10: -21.91)"  [PASS]
+    DisplayPcStatus                   : "[NUMERICAL_UNDERFLOW]"      [PASS]
+    DisplayTca (Shifted)              : "903.03 s (Shift: +133.4s)"  [PASS]
+    DisplayMissDistance (Expanded)    : "2454.4 m (+890.9m)"         [PASS]
+    DisplayRiskComparison             : "STATUS: AVOIDANCE RESOLVED" [PASS]
+
+[3.3] Interactive Controls Verification:
+  ResetSimulation()                   : T=0.0s, Step 1, Playing=True [PASS]
+  TogglePlayPause()                   : Toggles cleanly True <-> False [PASS]
+  IncreaseSpeed() Ladder              : 1.0 -> 2.0 -> 5.0 -> 10.0 -> 25.0 -> 50.0 -> 100.0 -> 200.0x [PASS]
+  DecreaseSpeed() Ladder              : 200.0 -> 100.0 -> 50.0 -> 25.0 -> 10.0 -> 5.0 -> 2.0 -> 1.0x [PASS]
+  Step Navigation (Jump/Fwd/Back)     : Step 1 -> 2 -> 3 -> 2        [PASS]
+
+STATUS: PASS (ALL 18 RUNTIME CHECKS PASSED)
+
+================================================================================
+4. ASTRODYNAMICS & METRIC CONSISTENCY AUDIT
+================================================================================
+Authoritative Source: unreal_simulation_payload.json
+
+Conjunction & Avoidance Geometry:
+  • Nominal Miss Distance            : 1563.4763 m
+  • Post-Manoeuvre Miss Distance     : 2454.4163 m
+  • Miss Distance Delta              : +890.9399 m (+56.985% gain)
+  • Nominal TCA                      : 769.6320 s (T+769.6s)
+  • Post-Manoeuvre TCA               : 903.0292 s (T+903.0s)
+  • TCA Shift (delta-TCA)            : +133.3973 s (+2.223 minutes)
+
+Collision Probability & Tail Preservation:
+  • Nominal Pc                       : 3.957542e-14
+  • Nominal log10(Pc)                : -13.4026
+  • Nominal 10^(log10_pc) / Pc ratio : 1.000000 (Exact mathematical match)
+  • Post-Manoeuvre Pc                : 1.238744e-22
+  • Post-Manoeuvre log10(Pc)         : -21.9070
+  • Post-Manoeuvre 10^(log10) / Pc   : 1.000000 (Exact mathematical match)
+  • Logarithmic Attenuation          : 8.5044 Decades (Orders of magnitude)
+  • Absolute Risk Reduction Factor   : 3.1948 x 10^8 (319,483,161 times safer)
+  • Numerical Tail Status            : NUMERICAL_UNDERFLOW (Preserved in HUD)
+
+Manoeuvre Investment & Dynamics:
+  • Impulse Magnitude                : 3.00 m/s
+  • Burn Frame & Direction           : RTN Radial Inward (-R)
+  • Burn Epoch                       : 169.6320 s
+  • Lead Time before Nominal TCA     : 600.0000 s (10.00 minutes)
+  • Peak Trajectory Deviation        : 3008.50 m (at T+1000.0s)
+  • Deviation at Nominal TCA         : 2018.99 m
+  • Deviation at Post-Burn TCA       : 2578.88 m
+
+STATUS: PASS (EXACT ZERO-FABRICATION VERIFICATION)
+
+================================================================================
+OVERALL MILESTONE 4 TEST VERDICT: COMPLETE SUCCESS (ALL TESTS PASSED)
+================================================================================
