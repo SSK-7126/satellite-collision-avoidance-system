@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "project": "Satellite Collision Avoidance System (ICPS)",
+    "milestone": "Milestone 4 - Performance Evaluation & Final Demonstration",
+    "scenario_id": "leo_close_approach_avoidance_demo",
+    "epoch_utc": "2026-01-01T00:00:00Z",
+    "orbital_regime": "Low Earth Orbit (LEO, 7000 km altitude sphere)"
+  },
+  "collision_avoidance_evaluation": {
+    "nominal_miss_distance_m": 1563.4763204846938,
+    "post_manoeuvre_miss_distance_m": 2454.4162631424065,
+    "absolute_miss_distance_improvement_m": 890.9399426577127,
+    "percentage_miss_distance_improvement": 56.984549812785914,
+    "nominal_tca_seconds": 769.6319705928811,
+    "post_manoeuvre_tca_seconds": 903.029223090176,
+    "tca_shift_seconds": 133.39725249729486,
+    "hard_body_radius_m": 5.0,
+    "screening_distance_threshold_m": 25000.0,
+    "collision_risk_threshold_m": 2000.0
+  },
+  "collision_probability_evaluation": {
+    "nominal_collision_probability": 3.957541544056335e-14,
+    "nominal_log10_pc": -13.402574517461254,
+    "nominal_pc_status": "NUMERICAL_UNDERFLOW",
+    "post_manoeuvre_collision_probability": 1.2387438017185828e-22,
+    "post_manoeuvre_log10_pc": -21.907018505573188,
+    "post_manoeuvre_pc_status": "NUMERICAL_UNDERFLOW",
+    "absolute_probability_difference": 3.957541531668897e-14,
+    "probability_reduction_factor": 319480229.7751805,
+    "logarithmic_reduction_orders_of_magnitude": 8.504443988111934,
+    "asymptotic_tail_underflow_preserved": true
+  },
+  "manoeuvre_budget_evaluation": {
+    "manoeuvre_id": "MAN_006_-R_3.00mps_T170s",
+    "burn_epoch_seconds": 169.6319705928811,
+    "lead_time_before_nominal_tca_seconds": 600.0,
+    "applied_delta_v_magnitude_mps": 3.0,
+    "delta_v_direction_rtn": "-R",
+    "delta_v_rtn_vector_mps": [
+      -3.0,
+      0.0,
+      0.0
+    ],
+    "delta_v_eci_vector_mps": [
+      -2.9499804502706697,
+      -0.5455413302590902,
+      0.0
+    ],
+    "burn_efficiency_analysis": "Radial inward (-R) impulse induces orbital eccentricity (e ≈ 0.0004), altering the radial trajectory and along-track phasing to open clearance at closest approach, while leaving semi-major axis and orbital period essentially unchanged."
+  },
+  "trajectory_deviation_evaluation": {
+    "max_trajectory_deviation_m": 3008.5029944305347,
+    "time_of_max_deviation_seconds": 1000.0,
+    "deviation_at_burn_epoch_m": 0.0,
+    "deviation_at_nominal_tca_m": 2018.9899673251857,
+    "deviation_at_post_manoeuvre_tca_m": 2578.8757122347574,
+    "final_trajectory_deviation_m": 3008.5029944305347
+  },
+  "verification_status": {
+    "scientific_solvers_frozen": true,
+    "unreal_data_bridge_synchronized": true,
+    "all_metrics_traceable_to_payload": true,
+    "d2_pytest_baseline_passed": true
+  }
+}

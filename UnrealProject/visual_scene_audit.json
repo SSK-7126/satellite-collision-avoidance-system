@@ -1,0 +1,177 @@
+{
+  "level_validation": {
+    "world_name": "CollisionAvoidanceDemo",
+    "world_path": "/Game/Scenarios/CollisionAvoidanceDemo.CollisionAvoidanceDemo",
+    "total_actor_count": 148,
+    "actor_classes": {
+      "WorldDataLayers": 1,
+      "SkyAtmosphere": 1,
+      "StaticMeshActor": 1,
+      "DirectionalLight": 1,
+      "SkyLight": 1,
+      "VolumetricCloud": 1,
+      "WorldPartitionMiniMap": 1,
+      "Landscape": 1,
+      "ExponentialHeightFog": 1,
+      "PlayerStart": 1,
+      "EarthActor": 1,
+      "LandscapeStreamingProxy": 64,
+      "OrbitPathActor": 3,
+      "ConjunctionVisualizer": 1,
+      "ManoeuvreVisualizer": 1,
+      "DebrisActor": 1,
+      "SatelliteActor": 1,
+      "OrbitSimulationManager": 1,
+      "CameraActor": 1,
+      "WorldPartitionHLOD": 64
+    }
+  },
+  "earth": {
+    "exists": true,
+    "count": 1,
+    "label": "Earth_CelestialBody",
+    "location": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "has_mesh_component": true,
+    "static_mesh_assigned": true,
+    "static_mesh_path": "/Engine/BasicShapes/Sphere.Sphere",
+    "component_scale": [
+      1275.6274,
+      1275.6274,
+      1275.6274
+    ],
+    "is_visible": true,
+    "is_hidden_in_game": false,
+    "renders_visible_geometry": true
+  },
+  "satellite": {
+    "exists": true,
+    "count": 1,
+    "label": "ProtectedSatellite_Payload01",
+    "location": [
+      70000.0,
+      0.0,
+      0.0
+    ],
+    "components": {
+      "satellite_body": {
+        "exists": true,
+        "static_mesh_assigned": true,
+        "static_mesh_path": "/Engine/BasicShapes/Cube.Cube",
+        "is_visible": true,
+        "renders_geometry": true
+      },
+      "solar_panel_left": {
+        "exists": true,
+        "static_mesh_assigned": true,
+        "static_mesh_path": "/Engine/BasicShapes/Cube.Cube",
+        "is_visible": true,
+        "renders_geometry": true
+      },
+      "solar_panel_right": {
+        "exists": true,
+        "static_mesh_assigned": true,
+        "static_mesh_path": "/Engine/BasicShapes/Cube.Cube",
+        "is_visible": true,
+        "renders_geometry": true
+      }
+    },
+    "any_geometry_rendering": true
+  },
+  "debris": {
+    "exists": true,
+    "count": 1,
+    "label": "SecondaryDebris_Object99",
+    "location": [
+      70000.0,
+      -100.0,
+      0.0
+    ],
+    "has_mesh_component": true,
+    "static_mesh_assigned": true,
+    "static_mesh_path": "/Engine/BasicShapes/Cone.Cone",
+    "is_visible": true,
+    "renders_visible_geometry": true
+  },
+  "orbit_trajectories": {
+    "exists": true,
+    "count": 3,
+    "instances": [
+      {
+        "label": "OrbitPath_SatelliteModified",
+        "spline_points_count": 501,
+        "component_types": [
+          "SplineComponent"
+        ],
+        "spline_mesh_count": 0,
+        "procedural_mesh_count": 0,
+        "static_mesh_count": 0,
+        "renders_solid_geometry": false
+      },
+      {
+        "label": "OrbitPath_SatelliteNominal",
+        "spline_points_count": 501,
+        "component_types": [
+          "SplineComponent"
+        ],
+        "spline_mesh_count": 0,
+        "procedural_mesh_count": 0,
+        "static_mesh_count": 0,
+        "renders_solid_geometry": false
+      },
+      {
+        "label": "OrbitPath_DebrisNominal",
+        "spline_points_count": 501,
+        "component_types": [
+          "SplineComponent"
+        ],
+        "spline_mesh_count": 0,
+        "procedural_mesh_count": 0,
+        "static_mesh_count": 0,
+        "renders_solid_geometry": false
+      }
+    ]
+  },
+  "lighting": {
+    "directional_lights_count": 1,
+    "directional_lights": [
+      "DirectionalLight"
+    ],
+    "sky_lights_count": 1,
+    "sky_lights": [
+      "SkyLight"
+    ],
+    "point_lights_count": 0,
+    "sky_atmosphere_count": 1,
+    "post_process_volume_count": 0,
+    "has_active_illumination": true
+  },
+  "telemetry_hud": {
+    "cpp_class_available": true,
+    "widget_class_name": "AvoidanceInfoPanelWidget",
+    "active_instances_count": 0,
+    "added_to_viewport": false,
+    "active_hud_controller_exists": false,
+    "player_controller_count": 0,
+    "hud_actor_count": 0
+  },
+  "camera": {
+    "viewport_camera_location": [
+      115000.0,
+      -45000.0,
+      32000.0
+    ],
+    "viewport_camera_rotation": [
+      -19.0,
+      152.0,
+      0.0
+    ],
+    "camera_actors_in_scene": 1,
+    "camera_actor_labels": [
+      "Camera_EncounterOverview"
+    ]
+  }
+}

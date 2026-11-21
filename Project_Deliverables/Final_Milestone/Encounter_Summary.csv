@@ -1,0 +1,13 @@
+Metric Category,Metric Parameter,Nominal State,Post-Manoeuvre State,Absolute Change,Relative Change,Operational Significance
+Encounter Geometry,Time of Closest Approach (TCA),769.6320 s,903.0292 s,+133.3973 s,+17.33 %,Delayed encounter by +133.4 seconds
+Encounter Geometry,Miss Distance (Metres),1563.48 m,2454.42 m,+890.94 m,+56.98 %,Expanded clearance above 2000m threshold
+Encounter Geometry,Relative Velocity at TCA,13.234 m/s,14.171 m/s,+0.937 m/s,+7.08 %,Moderate relative velocity modification
+Collision Risk,Collision Probability (Pc),3.957542e-14,1.238744e-22,-3.957542e-14,-100.00 %,Reduced risk by factor of 3.19e+08
+Collision Risk,Logarithmic Risk log10(Pc),-13.4026,-21.9070,-8.5044,-63.45 %,8.50 orders of magnitude risk attenuation
+Collision Risk,Risk Status Classification,CRITICAL_COLLISION_ALERT,RESOLVED_SAFE,MITIGATED,RESOLVED,Transited from CRITICAL ALERT to RESOLVED SAFE
+Collision Risk,Numerical Tail Status,NUMERICAL_UNDERFLOW,NUMERICAL_UNDERFLOW,PRESERVED,PRESERVED,Asymptotic tail preserved without zero underflow
+Trajectory Deviation,Peak Trajectory Separation,0.00 m,3008.50 m,+3008.50 m,N/A,Maximum orbital divergence at T=1000.0s
+Trajectory Deviation,Separation at Nominal TCA,0.00 m,2018.99 m,+2018.99 m,N/A,Substantial displacement at original encounter epoch
+Manoeuvre Effort,Applied Impulse (Delta-V),0.00 m/s,3.00 m/s,+3.00 m/s,N/A,Optimal fuel-efficient radial inward burn (-R)
+Manoeuvre Effort,Burn Lead Time to TCA,N/A,600.0 s,600.0 s,N/A,10 minutes advance warning for burn execution
+Manoeuvre Effort,Burn Epoch,N/A,T + 169.63 s,T + 169.63 s,N/A,Early orbit phasing modification epoch
