@@ -310,6 +310,45 @@ def test_numerical_collision_probability():
     print("  [PASS] Collision probability calculations are numerically valid and fully bounded.")
 
 
+def test_quality_flags_and_consequence_indicators():
+    print("\n[TEST 9] Verifying Standardized Quality Flags and Consequence Indicators...")
+    r_enc = np.array([500.0, 200.0, 0.0])
+    v_enc = np.array([0.0, 7500.0, 0.0])  # 7.5 km/s hypervelocity
+    cov_diag = create_diagonal_covariance(pos_std_m=[100.0, 100.0, 50.0], vel_std_mps=0.1)
+
+    res = calculate_collision_probability(
+        r_rel_tca=r_enc,
+        v_rel_tca=v_enc,
+        cov_rel_tca=cov_diag,
+        hard_body_radius=5.0
+    )
+
+    # 1. Quality flags verification
+    assert "quality_flags" in res
+    assert "VALID_COVARIANCE" in res["quality_flags"]
+    assert "COVARIANCE_PROJECTED" in res["quality_flags"]
+    assert "FOSTER_1D_INTEGRATION" in res["quality_flags"]
+
+    # 2. Consequence indicators verification (Section 6.3)
+    assert "consequence_indicators" in res
+    conseq = res["consequence_indicators"]
+    assert np.isclose(conseq["relative_speed_mps"], 7500.0)
+    assert np.isclose(conseq["relative_kinetic_energy_J_per_kg"], 0.5 * 7500.0**2)
+    assert conseq["consequence_category"] == "HYPERVELOCITY"
+
+    # 3. Missing covariance proxy consequence verification
+    proxy_res = calculate_simplified_risk_proxy(
+        miss_distance=500.0,
+        hard_body_radius=5.0,
+        relative_speed=7500.0
+    )
+    assert "consequence_indicators" in proxy_res
+    assert proxy_res["consequence_indicators"]["consequence_category"] == "HYPERVELOCITY"
+    assert "GEOMETRIC_FALLBACK" in proxy_res["quality_flags"]
+
+    print("  [PASS] Quality flags and consequence indicators validated per Section 6.3.")
+
+
 def run_all_tests():
     print("=" * 70)
     print("D2 UNCERTAINTY & COLLISION PROBABILITY VERIFICATION SUITE")
@@ -323,6 +362,7 @@ def run_all_tests():
     test_covariance_propagation()
     test_missing_covariance_handling()
     test_numerical_collision_probability()
+    test_quality_flags_and_consequence_indicators()
 
     print("\n" + "=" * 70)
     print("ALL UNCERTAINTY AND COLLISION PROBABILITY TESTS PASSED")
