@@ -1,0 +1,10 @@
+scenario_id,name,status,runtime_seconds,key_metric
+S0,Circular Orbit,PASSED,0.1202,"('orbital_radius_m', 7000000.0)"
+S1,Elliptical Orbit,PASSED,0.1151,"('semi_major_axis_m', 7000000.0)"
+S2,Close Approach,PASSED,0.0394,"('nominal_tca_seconds', 769.6315982543825)"
+S3,Uncertain Conjunction,PASSED,0.1432,"('tca_seconds', 769.6315982543825)"
+S4,Avoidance Burn,PASSED,11.5316,"('selected_manoeuvre_id', 'MAN_038_-R_3.00mps_T170s')"
+S5,Multiple Debris,PASSED,2.9989,"('total_objects_screened', 10)"
+S6,Perturbed LEO,PASSED,3.0544,"('duration_seconds', np.float64(17485.549913058047))"
+S7,Sensor Outage,PASSED,0.0098,"('total_tracking_epochs', 121)"
+S8,Safe Pass,PASSED,0.2892,"('nominal_miss_distance_m', 7654.607221413779)"

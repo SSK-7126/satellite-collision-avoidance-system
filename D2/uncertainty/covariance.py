@@ -195,6 +195,10 @@ def combine_relative_covariance(
     return validate_covariance(cov_rel, name="Relative Covariance (P_rel)", rtol=rtol, atol=atol)
 
 
+# Backward and cross-module compatibility alias
+combine_covariances = combine_relative_covariance
+
+
 def propagate_covariance(cov_0, phi, q=None, rtol=1e-5, atol=1e-8):
     """
     Propagate state covariance using a linear state-transition matrix and process noise.

@@ -238,12 +238,27 @@ def calculate_collision_probability(
     if hbr < 0.0:
         raise ValueError("Combined hard-body radius must be non-negative.")
 
+    # Compute consequence indicators (Technical Guide Section 6.3)
+    v_norm = float(np.linalg.norm(v_rel_tca))
+    rel_ke = 0.5 * v_norm**2
+    if v_norm < 1000.0:
+        conseq_cat = "LOW_VELOCITY"
+    elif v_norm < 10000.0:
+        conseq_cat = "HYPERVELOCITY"
+    else:
+        conseq_cat = "EXTREME_HYPERVELOCITY"
+    consequence_indicators = {
+        "relative_speed_mps": v_norm,
+        "relative_kinetic_energy_J_per_kg": rel_ke,
+        "consequence_category": conseq_cat,
+    }
+
     # 1. Safeguard: Handle missing covariance explicitly without fabricating zero uncertainty
     if cov_rel_tca is None:
         risk_proxy = calculate_simplified_risk_proxy(
             miss_distance=float(np.linalg.norm(r_rel_tca)),
             hard_body_radius=hbr,
-            relative_speed=float(np.linalg.norm(v_rel_tca)),
+            relative_speed=v_norm,
         )
         return {
             "pc": None,
@@ -257,6 +272,7 @@ def calculate_collision_probability(
             "miss_distance_m": float(np.linalg.norm(r_rel_tca)),
             "encounter_plane_metrics": None,
             "risk_proxy": risk_proxy,
+            "consequence_indicators": consequence_indicators,
             "quality_flags": ["COVARIANCE_MISSING", "PC_NOT_COMPUTABLE"],
             "assumptions": (
                 "Covariance data was not provided. In accordance with Section 6.2 of the "
@@ -373,7 +389,7 @@ def calculate_collision_probability(
         pc_val = pc_foster
         log10_pc = float(np.log10(max(pc_val, 1e-300)))
 
-    quality_flags = ["VALID_COVARIANCE", "FOSTER_1D_INTEGRATION"]
+    quality_flags = ["VALID_COVARIANCE", "COVARIANCE_PROJECTED", "FOSTER_1D_INTEGRATION"]
     if miss_distance > 5.0 * max(sigma_x, sigma_y):
         quality_flags.append("LARGE_MISS_DISTANCE")
 
@@ -384,6 +400,7 @@ def calculate_collision_probability(
         method_str = f"foster_1d_encounter_plane (tail_asymptotic, n_theta={n_theta})"
     else:
         status = "COMPUTED"
+        quality_flags.append("PSD_VALID")
         method_str = f"foster_1d_encounter_plane (n_theta={n_theta})"
 
     return {
@@ -405,6 +422,7 @@ def calculate_collision_probability(
             "semi_minor_axis_sigma_m": sigma_y,
             "mahalanobis_distance": mahalanobis_dist,
         },
+        "consequence_indicators": consequence_indicators,
         "quality_flags": quality_flags,
         "assumptions": (
             "Encounter duration is short relative to orbital period; rectilinear relative motion; "
@@ -444,6 +462,15 @@ def calculate_simplified_risk_proxy(miss_distance, hard_body_radius, relative_sp
     denom = max(d, 1e-6)
     ratio = r / denom
 
+    consequence_indicators = None
+    if relative_speed is not None:
+        v_s = float(relative_speed)
+        consequence_indicators = {
+            "relative_speed_mps": v_s,
+            "relative_kinetic_energy_J_per_kg": 0.5 * v_s**2,
+            "consequence_category": "LOW_VELOCITY" if v_s < 1000.0 else ("HYPERVELOCITY" if v_s < 10000.0 else "EXTREME_HYPERVELOCITY"),
+        }
+
     return {
         "metric_type": "GEOMETRIC_PROXIMITY_PROXY",
         "is_probability": False,
@@ -452,6 +479,8 @@ def calculate_simplified_risk_proxy(miss_distance, hard_body_radius, relative_sp
         "miss_distance_m": d,
         "hard_body_radius_m": r,
         "relative_speed_mps": float(relative_speed) if relative_speed is not None else None,
+        "consequence_indicators": consequence_indicators,
+        "quality_flags": ["GEOMETRIC_FALLBACK", "NO_COVARIANCE"],
         "disclaimer": (
             "This metric is a deterministic geometric proximity score, NOT a probability of "
             "collision (Pc). It cannot be interpreted as likelihood without state covariance."

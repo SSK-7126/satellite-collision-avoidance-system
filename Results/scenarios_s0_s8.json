@@ -1,0 +1,140 @@
+{
+  "S0": {
+    "scenario_id": "S0_CIRCULAR_ORBIT",
+    "status": "PASSED",
+    "orbital_radius_m": 7000000.0,
+    "expected_speed_mps": 7546.053290107542,
+    "final_speed_mps": 7546.053290107447,
+    "orbital_period_s": 5828.516637686015,
+    "radial_error_m": 1.387670636177063e-07,
+    "closure_distance_m": 9.721066548885572e-07,
+    "relative_energy_error": 1.4131040361717971e-14,
+    "num_integration_steps": 5830,
+    "runtime_seconds": 0.1202
+  },
+  "S1": {
+    "scenario_id": "S1_ELLIPTICAL_ORBIT",
+    "status": "PASSED",
+    "semi_major_axis_m": 7000000.0,
+    "eccentricity": 0.05,
+    "expected_perigee_m": 6650000.0,
+    "simulated_perigee_m": 6649999.999999934,
+    "perigee_error_m": 6.612390279769897e-08,
+    "expected_apogee_m": 7350000.0,
+    "simulated_apogee_m": 7349999.987690914,
+    "apogee_error_m": 0.012309085577726364,
+    "expected_perigee_speed_mps": 7933.278758694787,
+    "expected_apogee_speed_mps": 7177.728400723855,
+    "relative_energy_error": 3.1402311914928817e-15,
+    "relative_angular_momentum_error": 8.676947385943528e-16,
+    "runtime_seconds": 0.1151
+  },
+  "S2": {
+    "scenario_id": "S2_CLOSE_APPROACH",
+    "status": "PASSED",
+    "nominal_tca_seconds": 769.6315982543825,
+    "nominal_miss_distance_m": 1563.4763204422763,
+    "linear_cpa_miss_distance_m": 0.0,
+    "linear_vs_numerical_diff_m": 1563.4763204422763,
+    "relative_speed_at_tca_mps": 13.23418958066879,
+    "screening_classification": "CONJUNCTION_CANDIDATE",
+    "is_conjunction_candidate": true,
+    "runtime_seconds": 0.0394
+  },
+  "S3": {
+    "scenario_id": "S3_UNCERTAIN_CONJUNCTION",
+    "status": "PASSED",
+    "tca_seconds": 769.6315982543825,
+    "miss_distance_m": 1563.4763204422763,
+    "hard_body_radius_m": 5.0,
+    "collision_probability": 2.90784805241927e-16,
+    "log10_pc": -15.536428290976668,
+    "pc_status": "NUMERICAL_UNDERFLOW",
+    "asymptotic_tail_underflow_preserved": true,
+    "quality_flags": [
+      "VALID_COVARIANCE",
+      "COVARIANCE_PROJECTED",
+      "FOSTER_1D_INTEGRATION",
+      "LARGE_MISS_DISTANCE",
+      "FLOAT64_INTEGRATION_UNDERFLOW",
+      "TAIL_ASYMPTOTIC_LOGPC"
+    ],
+    "consequence_indicators": {
+      "relative_speed_mps": 13.23418958066879,
+      "relative_kinetic_energy_J_per_kg": 87.57188692854119,
+      "consequence_category": "LOW_VELOCITY"
+    },
+    "runtime_seconds": 0.1432
+  },
+  "S4": {
+    "scenario_id": "S4_AVOIDANCE_BURN",
+    "status": "PASSED",
+    "selected_manoeuvre_id": "MAN_038_-R_3.00mps_T170s",
+    "delta_v_magnitude_mps": 3.0,
+    "delta_v_direction_rtn": "-R",
+    "burn_epoch_seconds": 169.63159825438254,
+    "nominal_miss_distance_m": 1563.4763204422763,
+    "post_manoeuvre_miss_distance_m": 2453.017798233738,
+    "miss_distance_gain_m": 889.5414777914618,
+    "tca_shift_seconds": 133.5922903499628,
+    "nominal_collision_probability": 2.90784805241927e-16,
+    "post_collision_probability": 8.093329263251847e-24,
+    "estimated_fuel_consumed_kg": 1.019196479075779,
+    "operational_threshold_satisfied": true,
+    "runtime_seconds": 11.5316
+  },
+  "S5": {
+    "scenario_id": "S5_MULTIPLE_DEBRIS",
+    "status": "PASSED",
+    "total_objects_screened": 10,
+    "conjunction_candidates_detected": 7,
+    "primary_threat_id": "DEBRIS_01_CRITICAL",
+    "primary_nominal_miss_m": 1563.4763204422763,
+    "primary_post_miss_m": 3399.871785305842,
+    "minimum_post_manoeuvre_clearance_m": 3399.871785305842,
+    "all_debris_cleared_safely": true,
+    "runtime_seconds": 2.9989
+  },
+  "S6": {
+    "scenario_id": "S6_PERTURBED_LEO",
+    "status": "PASSED",
+    "duration_seconds": 17485.549913058047,
+    "num_orbits_propagated": 3.0,
+    "j2_trajectory_divergence_m": 239619.72954451383,
+    "expected_raan_drift_deg": -1.029604303629492,
+    "semi_major_axis_decay_from_drag_m": -1.7504615187644958,
+    "force_models_validated": [
+      "Earth_J2_Zonal",
+      "Atmospheric_Drag_Exponential"
+    ],
+    "runtime_seconds": 3.0544
+  },
+  "S7": {
+    "scenario_id": "S7_SENSOR_OUTAGE",
+    "status": "PASSED",
+    "total_tracking_epochs": 121,
+    "valid_observations_received": 80,
+    "dropped_observations_in_outage": 41,
+    "outage_interval_seconds": [
+      100.0,
+      300.0
+    ],
+    "nominal_position_variance_m2": 225.0,
+    "peak_outage_position_variance_m2": 25850.0,
+    "variance_dilation_factor": 114.88888888888889,
+    "tracking_recovered_after_outage": true,
+    "runtime_seconds": 0.0098
+  },
+  "S8": {
+    "scenario_id": "S8_SAFE_PASS",
+    "status": "PASSED",
+    "nominal_miss_distance_m": 7654.607221413779,
+    "operational_safety_threshold_m": 2000.0,
+    "safety_margin_m": 5654.607221413779,
+    "planning_status": "NO_MANOEUVRE_REQUIRED",
+    "avoidance_needed": false,
+    "delta_v_expended_mps": 0.0,
+    "false_alarm_prevented": true,
+    "runtime_seconds": 0.2892
+  }
+}

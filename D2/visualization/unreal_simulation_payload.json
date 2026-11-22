@@ -15711,6 +15711,18 @@
       ]
     ]
   },
+  "sensing_metadata": {
+    "sensor_modality": "OPTICAL_AND_RADAR",
+    "tracking_status": "ACTIVE_NOMINAL",
+    "outage_active": false,
+    "optical_sensor_id": "OPTICAL_TELESCOPE_01",
+    "radar_sensor_id": "GROUND_RADAR_01"
+  },
+  "ml_inference_metadata": {
+    "model_version": "baseline_rule_based_v1.0",
+    "proposal_validation": "VALIDATED_SAFE",
+    "prediction_risk_class": "CRITICAL_COLLISION_ALERT"
+  },
   "demonstration_sequence": [
     {
       "step": 1,

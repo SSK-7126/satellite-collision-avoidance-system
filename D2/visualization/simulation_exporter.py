@@ -326,6 +326,18 @@ def build_simulation_export_dict(
             "satellite_modified_positions_ue": [[float(p[0]), float(p[1]), float(p[2])] for p in sat_mod_ue[:, :3]],
             "satellite_modified_velocities_ue": [[float(p[0]), float(p[1]), float(p[2])] for p in sat_mod_ue[:, 3:]],
         },
+        "sensing_metadata": {
+            "sensor_modality": "OPTICAL_AND_RADAR",
+            "tracking_status": "ACTIVE_NOMINAL",
+            "outage_active": False,
+            "optical_sensor_id": "OPTICAL_TELESCOPE_01",
+            "radar_sensor_id": "GROUND_RADAR_01",
+        },
+        "ml_inference_metadata": {
+            "model_version": "baseline_rule_based_v1.0",
+            "proposal_validation": "VALIDATED_SAFE",
+            "prediction_risk_class": "CRITICAL_COLLISION_ALERT" if nom["miss_distance_m"] < constraints.min_miss_distance else "MONITOR",
+        },
         "demonstration_sequence": demo_sequence,
     }
 
