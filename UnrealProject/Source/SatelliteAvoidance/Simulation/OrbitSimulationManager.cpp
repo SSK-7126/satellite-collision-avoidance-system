@@ -17,13 +17,68 @@ AOrbitSimulationManager::AOrbitSimulationManager()
 	bManoeuvreExecuted = false;
 }
 
+namespace
+{
+	static FString GetSafeActorName(const AActor* InActor)
+	{
+		if (!InActor) return FString();
+#if WITH_EDITOR
+		return InActor->GetActorLabel();
+#else
+		for (const FName& Tag : InActor->Tags)
+		{
+			const FString TagStr = Tag.ToString();
+			if (!TagStr.IsEmpty() && !TagStr.StartsWith(TEXT("UAID_")))
+			{
+				return TagStr;
+			}
+		}
+		return InActor->GetName();
+#endif
+	}
+
+	static bool DoesActorMatchName(const AActor* InActor, const FString& TargetName, bool bExact = false)
+	{
+		if (!InActor) return false;
+#if WITH_EDITOR
+		const FString Label = InActor->GetActorLabel();
+		if (bExact ? Label.Equals(TargetName, ESearchCase::IgnoreCase) : Label.Contains(TargetName, ESearchCase::IgnoreCase))
+		{
+			return true;
+		}
+#endif
+		if (InActor->ActorHasTag(FName(*TargetName)))
+		{
+			return true;
+		}
+		for (const FName& Tag : InActor->Tags)
+		{
+			const FString TagStr = Tag.ToString();
+			if (bExact ? TagStr.Equals(TargetName, ESearchCase::IgnoreCase) : TagStr.Contains(TargetName, ESearchCase::IgnoreCase))
+			{
+				return true;
+			}
+		}
+		const FString Name = InActor->GetName();
+		return bExact ? Name.Equals(TargetName, ESearchCase::IgnoreCase) : Name.Contains(TargetName, ESearchCase::IgnoreCase);
+	}
+}
+
 void AOrbitSimulationManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Default relative path to the generated Python payload
-	const FString DefaultPayloadPath = FPaths::ProjectDir() / TEXT("../D2/visualization/unreal_simulation_payload.json");
-	InitializeSimulationFromPayload(DefaultPayloadPath);
+	// Robust multi-path resolution: packaged content dir, project data dir, or relative dev dir
+	FString SelectedPayloadPath = FPaths::ProjectContentDir() / TEXT("Data/unreal_simulation_payload.json");
+	if (!FPaths::FileExists(SelectedPayloadPath))
+	{
+		SelectedPayloadPath = FPaths::ProjectDir() / TEXT("Data/unreal_simulation_payload.json");
+	}
+	if (!FPaths::FileExists(SelectedPayloadPath))
+	{
+		SelectedPayloadPath = FPaths::ProjectDir() / TEXT("../D2/visualization/unreal_simulation_payload.json");
+	}
+	InitializeSimulationFromPayload(SelectedPayloadPath);
 
 	// Auto-discover scene actor references if not set in editor
 	if (GetWorld())
@@ -72,12 +127,12 @@ void AOrbitSimulationManager::BeginPlay()
 		{
 			for (TActorIterator<AOrbitPathActor> It(GetWorld()); It; ++It)
 			{
-				const FString Label = It->GetActorLabel();
-				if (Label.Contains(TEXT("Debris")))
+				const FString Label = GetSafeActorName(*It);
+				if (Label.Contains(TEXT("Debris")) || DoesActorMatchName(*It, TEXT("Debris"), false))
 				{
 					DebrisPathActor = *It;
 				}
-				else if (Label.Contains(TEXT("Modified")))
+				else if (Label.Contains(TEXT("Modified")) || DoesActorMatchName(*It, TEXT("Modified"), false))
 				{
 					SatModifiedPathActor = *It;
 				}
@@ -98,13 +153,17 @@ void AOrbitSimulationManager::BeginPlay()
 		{
 			for (AActor* Cam : CameraViews)
 			{
-				if (Cam && Cam->GetActorLabel().Contains(TEXT("Earth_Overview"), ESearchCase::IgnoreCase))
+				if (Cam && DoesActorMatchName(Cam, TEXT("Earth_Overview"), false))
 				{
 					OverviewCamera = Cam;
 					break;
 				}
 			}
-			if (!OverviewCamera)
+			if (!OverviewCamera && CameraViews.Num() == 6)
+			{
+				OverviewCamera = CameraViews[5];
+			}
+			else if (!OverviewCamera)
 			{
 				OverviewCamera = CameraViews[0];
 			}
@@ -516,7 +575,7 @@ void AOrbitSimulationManager::CycleCameraView()
 		if (PC)
 		{
 			PC->SetViewTargetWithBlend(TargetCam, 0.75f);
-			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Switched camera to [%s] (Index %d/%d)"), *TargetCam->GetActorLabel(), CurrentCameraIndex + 1, CameraViews.Num());
+			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Switched camera to [%s] (Index %d/%d)"), *GetSafeActorName(TargetCam), CurrentCameraIndex + 1, CameraViews.Num());
 		}
 	}
 }
@@ -569,10 +628,10 @@ void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
 		break;
 	}
 
-	// 1. Deterministic exact match by actor label
+	// 1. Deterministic exact match by actor label/tag/name
 	for (int32 i = 0; i < CameraViews.Num(); ++i)
 	{
-		if (CameraViews[i] && CameraViews[i]->GetActorLabel().Equals(TargetCameraName, ESearchCase::IgnoreCase))
+		if (CameraViews[i] && DoesActorMatchName(CameraViews[i], TargetCameraName, true))
 		{
 			CurrentCameraIndex = i;
 			APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
@@ -592,7 +651,7 @@ void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
 
 	for (int32 i = 0; i < CameraViews.Num(); ++i)
 	{
-		if (CameraViews[i] && CameraViews[i]->GetActorLabel().Contains(CleanTarget, ESearchCase::IgnoreCase))
+		if (CameraViews[i] && DoesActorMatchName(CameraViews[i], CleanTarget, false))
 		{
 			CurrentCameraIndex = i;
 			APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
@@ -601,8 +660,33 @@ void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
 				PC->SetViewTargetWithBlend(CameraViews[i], 0.75f);
 			}
 			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Step %d -> Camera [%s] via substring [%s] (Index %d/%d)"),
-				StepIndex, *CameraViews[i]->GetActorLabel(), *CleanTarget, CurrentCameraIndex + 1, CameraViews.Num());
+				StepIndex, *GetSafeActorName(CameraViews[i]), *CleanTarget, CurrentCameraIndex + 1, CameraViews.Num());
 			return;
 		}
+	}
+
+	// 3. Fallback: Standard 6-view index mapping if names/tags were stripped in shipping package
+	int32 FallbackIndex = -1;
+	if (CameraViews.Num() == 6)
+	{
+		if (TargetCameraName.Contains(TEXT("Earth_Overview"))) FallbackIndex = 5;
+		else if (TargetCameraName.Contains(TEXT("Satellite_Detail"))) FallbackIndex = 4;
+		else if (TargetCameraName.Contains(TEXT("Encounter_Overview"))) FallbackIndex = 3;
+		else if (TargetCameraName.Contains(TEXT("Debris_Detail"))) FallbackIndex = 2;
+		else if (TargetCameraName.Contains(TEXT("Manoeuvre_Burn"))) FallbackIndex = 1;
+		else if (TargetCameraName.Contains(TEXT("Conjunction_TCA"))) FallbackIndex = 0;
+	}
+
+	if (FallbackIndex >= 0 && FallbackIndex < CameraViews.Num() && CameraViews[FallbackIndex])
+	{
+		CurrentCameraIndex = FallbackIndex;
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC)
+		{
+			PC->SetViewTargetWithBlend(CameraViews[CurrentCameraIndex], 0.75f);
+		}
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Step %d -> Camera [%s] via deterministic index fallback (Index %d/%d)"),
+			StepIndex, *TargetCameraName, CurrentCameraIndex + 1, CameraViews.Num());
+		return;
 	}
 }

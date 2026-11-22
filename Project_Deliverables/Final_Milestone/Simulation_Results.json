@@ -46,7 +46,7 @@
       -0.5455413302590902,
       0.0
     ],
-    "burn_efficiency_analysis": "Radial inward (-R) impulse induces orbital eccentricity (e ≈ 0.0004), altering the radial trajectory and along-track phasing to open clearance at closest approach, while leaving semi-major axis and orbital period essentially unchanged."
+    "burn_efficiency_analysis": "Radial inward (-R) impulse lowers orbital radius and period, inducing along-track phasing lead that dilates miss distance with zero out-of-plane waste."
   },
   "trajectory_deviation_evaluation": {
     "max_trajectory_deviation_m": 3008.5029944305347,
