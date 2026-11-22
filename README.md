@@ -1,7 +1,8 @@
 # Satellite Anti-Collision System (ICPS)
 ### Autonomous Satellite Collision Avoidance System
 
-[![Regression Tests](https://img.shields.io/badge/D2%20Pytest-39%2F39%20Passed-brightgreen)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/D2/tests)
+[![Pytest Test Suite](https://img.shields.io/badge/Pytest%20Suite-70%2F70%20Passed-brightgreen)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/tests)
+[![Scenario Suite](https://img.shields.io/badge/Scenarios%20S0--S8-9%2F9%20Passed-brightgreen)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Scenarios)
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.7.4-blue)](https://www.unrealengine.com/)
 [![Astrodynamics Solvers](https://img.shields.io/badge/Backend-Python%20RK4%20%7C%20Foster%20(1992)-orange)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/D2/)
 [![Milestone](https://img.shields.io/badge/Milestone-4%20Final%20QC%20Approved-success)](file:///c:/Users/Sriram%20Krovi/satellite-collision-avoidance-system/Project_Deliverables/Final_Milestone/)
@@ -37,9 +38,14 @@ Developed under the Autonomous Satellite Collision Avoidance System project (ICP
 | :--- | :--- | :--- |
 | **Scientific Astrodynamics** | Python (NumPy, SciPy) | Numerical RK4 propagation, two-body equations of motion, covariance propagation |
 | **Conjunction & Collision Risk** | Python D1/D2 Solvers | Numerical TCA detection, Foster (1992) probability solver, screening filters |
-| **Manoeuvre Planner** | Python Optimization Engine | Discrete RTN candidate generation, multi-criteria ranking, Delta-V optimization |
-| **Data Bridge** | JSON Contract (`unreal_simulation_payload.json`) | Versioned data contract serializing 8 milestone epochs, full trajectories, and telemetry |
-| **Visualization & Telemetry** | Unreal Engine 5.7.4 (C++ / UMG) | Physics-synchronized 3D rendering, interactive HUD telemetry, 8 milestone cameras |
+| **Manoeuvre & Propulsion** | Python Optimization Engine | Discrete RTN candidate generation, Tsiolkovsky propellant calculation, finite-burn 7D propagation, execution dispersion |
+| **Sensor Simulation** | Python Sensor Subsystem | Ground truth vs. observation separation, optical LOS & angular noise, radar range & Doppler, WGS84 ground stations, outage injection |
+| **ML Inference Service** | Python Service (JSON Schema v1.0) | Standardized request/response interface, frame & timestamp validation, heuristic risk estimation, physics-based safety gate |
+| **Advanced Orbital Dynamics** | Python Perturbation Engine | Optional WGS84 $J_2$ geopotential harmonic and exponential atmospheric drag with atmospheric co-rotation |
+| **Scenario Suite (S0–S8)** | Python Automated Test Suite | Standardized evaluation benchmarks (circular, elliptical, close approach, multiple debris, perturbed LEO, outages, safe pass) |
+| **Evaluation & Metrics** | Python Analytics Engine | Automated calculation of TCA error, miss distance error, decision lead time, risk reduction factor, propellant consumed |
+| **Data Bridge** | JSON Contract (`unreal_simulation_payload.json`) | Versioned data contract serializing 8 milestone epochs, full trajectories, sensing metadata, and ML telemetry |
+| **Visualization & Telemetry** | Unreal Engine 5.7.4 (C++ / UMG) | Physics-synchronized 3D rendering, interactive HUD telemetry, 8 milestone cameras, sensor visualizer actor component |
 
 ```
 +---------------------------------------------------------------------------------+
@@ -178,29 +184,43 @@ All authoritative final deliverables for Milestone 4 and the Quality Control pas
 
 ### Reproduction Instructions
 
-#### A. Run D2 Scientific Regression Test Suite
-Verify that all 39 astrodynamics unit tests pass:
+#### A. Run Complete Unit & Integration Test Suite (70 Tests)
+Verify that all 70 tests across astrodynamics, propulsion, sensors, ML service, and scenarios pass:
+```powershell
+$env:MPLBACKEND="Agg"
+python -m pytest tests D2/tests -v --tb=short
+```
+
+#### B. Run Standardized S0–S8 Scenario Suite
+Execute the nine benchmark scenarios defined in the technical specification:
+```powershell
+python Scenarios/scenario_runner.py
+```
+This generates `Results/scenarios_s0_s8.json` and `Results/scenarios_summary.csv`.
+
+#### C. Run D2 Scientific Regression Test Suite (Baseline 39 Tests)
+Verify the historical baseline astrodynamics unit tests pass:
 ```powershell
 $env:MPLBACKEND="Agg"
 python -m pytest D2/tests -v --tb=short
 ```
 
-#### B. Re-generate Performance Charts, Excel & CSV Tables
+#### D. Re-generate Performance Charts, Excel & CSV Tables
 ```powershell
 python generate_milestone4_evaluation.py
 ```
 
-#### C. Re-compile Technical Report PDF
+#### E. Re-compile Technical Report PDF
 ```powershell
 python build_technical_report_pdf.py
 ```
 
-#### D. Re-render Demonstration Video
+#### F. Re-render Demonstration Video
 ```powershell
 python build_demonstration_video.py
 ```
 
-#### E. Run In-Engine Interactive Validation in Unreal Engine 5.7
+#### G. Run In-Engine Interactive Validation in Unreal Engine 5.7
 ```powershell
 & "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "c:\Users\Sriram Krovi\satellite-collision-avoidance-system\UnrealProject\SatelliteAvoidance.uproject" -ExecutePythonScript="c:\Users\Sriram Krovi\satellite-collision-avoidance-system\UnrealProject\Scripts\verify_milestone3_fixes.py" -stdout -unattended -nopause -nosplash
 ```
@@ -223,17 +243,57 @@ satellite-collision-avoidance-system/
 │   └── relative_motion.py                       # Relative distance and closest approach
 ├── D2/                                          # Deliverable 2: Autonomous avoidance manoeuvre planning
 │   ├── conjunction/                             # TCA and screening modules
-│   ├── dynamics/                                # Two-body gravity, RK4 integrator, variational STM
+│   ├── dynamics/                                # Two-body gravity, RK4 integrator, variational STM, J2 & drag
+│   │   ├── perturbations.py                     # Optional WGS84 J2 harmonic and atmospheric drag
+│   │   └── rk4.py                               # RK4 integrator with convergence scaling verification
 │   ├── manoeuvres/                              # Avoidance pipeline, candidate generator, optimizer
+│   │   └── propulsion.py                        # Tsiolkovsky equation, 7D finite burn, execution dispersion
 │   ├── uncertainty/                             # Covariance propagation, Foster (1992) Pc solver
 │   ├── visualization/                           # Unreal coordinate transform, JSON simulation payload
-│   └── tests/                                   # Automated test suite (39 pytest unit tests)
+│   └── tests/                                   # Astrodynamics unit test suite (45 tests)
+├── Sensors/                                     # Sensor & observation simulation subsystem
+│   ├── __init__.py
+│   └── sensor_models.py                         # Optical, radar, ground station passes, outage injection
+├── MLService/                                   # Machine learning inference service & contracts
+│   ├── __init__.py
+│   ├── schemas.py                               # Versioned JSON schema (v1.0) definitions
+│   └── inference_service.py                     # Inference service with frame, freshness & safety gates
+├── Scenarios/                                   # Standardized S0–S8 scenario test suite
+│   ├── __init__.py
+│   ├── s0_circular_orbit.py                     # S0: Circular LEO baseline
+│   ├── s1_elliptical_orbit.py                   # S1: Elliptical orbit conservation
+│   ├── s2_close_approach.py                     # S2: Close approach conjunction
+│   ├── s3_uncertain_conjunction.py               # S3: Covariance & encounter-plane Pc
+│   ├── s4_avoidance_burn.py                     # S4: Avoidance burn execution and clearance
+│   ├── s5_multiple_debris.py                    # S5: Multiple debris cloud screening
+│   ├── s6_perturbed_leo.py                      # S6: Perturbed LEO orbit propagation
+│   ├── s7_sensor_outage.py                      # S7: Sensor tracking outage injection
+│   ├── s8_safe_pass.py                          # S8: Safe passage non-conjunction
+│   └── scenario_runner.py                       # Master scenario runner
+├── Evaluation/                                  # Evaluation metrics suite
+│   ├── __init__.py
+│   └── metrics_suite.py                         # TCA error, miss distance error, fuel, risk reduction
+├── tests/                                       # Integration test suite (25 tests)
+│   ├── test_sensors.py                          # Sensor subsystem unit tests (5 tests)
+│   ├── test_ml_service.py                       # ML inference service unit tests (5 tests)
+│   └── test_scenarios.py                        # S0–S8 integration tests (9 tests)
+├── Results/                                     # Reproducible benchmark output data
+│   ├── scenarios_s0_s8.json                     # Structured JSON results for S0–S8
+│   └── scenarios_summary.csv                    # Summary metrics table for S0–S8
 ├── Project_Deliverables/                        # Authoritative milestone deliverables
-│   └── Final_Milestone/                         # Milestone 4 reports, video, charts, and datasets
+│   ├── Final_Milestone/                         # Milestone 4 reports, video, charts, and datasets
+│   └── Completion_Work/                         # Technical guide alignment documentation & reports
+│       ├── REQUIREMENT_TRACEABILITY.md          # 16-section requirement traceability matrix
+│       ├── IMPLEMENTATION_PLAN.md               # Phase-by-phase execution plan
+│       ├── BASELINE_AUDIT.md                    # Initial baseline audit document
+│       ├── PROGRESS.md & PROGRESS.json          # Live tracking logs
+│       ├── FINAL_COMPLETION_REPORT.md           # Comprehensive completion engineering report
+│       └── FINAL_COMPLETION_AUDIT.md            # Independent verification audit report
 └── UnrealProject/                               # Unreal Engine 5.7.4 visualization project
     ├── Config/                                  # Project engine and game configuration
     ├── Content/                                 # Materials, textures, Earth assets, scenario maps
     ├── Source/SatelliteAvoidance/               # C++ actors, data bridge, HUD widget, visualizers
+    │   └── Visualization/                       # USensorVisualizerComponent, orbit actors
     └── Scripts/                                 # Headless Python automation & verification scripts
 ```
 
@@ -246,7 +306,8 @@ satellite-collision-avoidance-system/
 > This software is an academic and engineering prototype designed for concept demonstration, numerical analysis, and simulation visualization. It is **not** certified flight software, nor is it intended for real-time operational collision-avoidance decision making without qualification.
 
 Key simplifications and assumptions:
-1. **Orbital Dynamics**: Dynamics are modeled using two-body Keplerian gravity ($\mu = 3.986004418 \times 10^{14}\text{ m}^3/\text{s}^2$). Perturbations such as Earth oblateness ($J_2$), atmospheric drag, solar radiation pressure, and third-body lunisolar gravity are omitted.
-2. **Impulsive Burn Approximation**: The manoeuvre is applied instantaneously as an impulsive velocity increment ($\Delta \mathbf{v}$). Finite-thrust burn transients, attitude slew settling, thruster warm-up, and pointing jitter are not simulated.
+1. **Orbital Dynamics**: The baseline dynamics model employs two-body Keplerian gravity ($\mu = 3.986004418 \times 10^{14}\text{ m}^3/\text{s}^2$). Advanced perturbations including Earth oblateness ($J_2$) and atmospheric drag with atmospheric co-rotation are available as opt-in force models in `D2/dynamics/perturbations.py`. Higher-degree spherical harmonics ($J_3, J_{2,2}, \dots$) and lunisolar third-body gravity are not included.
+2. **Propulsion Modeling**: The reference scenario evaluates an impulsive velocity increment ($\Delta \mathbf{v} = 3.0\text{ m/s}$). Finite-duration thrusting and execution pointing/magnitude uncertainties are modeled in `D2/manoeuvres/propulsion.py` for comparative analysis.
 3. **Collision Probability Bounds**: Collision probability ($P_c$) is computed using the Foster (1992) 2D encounter plane integration. Due to the high nominal miss distance ($1563.48\text{ m}$) relative to the combined hard-body radius ($5.00\text{ m}$), evaluated values ($10^{-14}$ to $10^{-22}$) inhabit the asymptotic tail of the Gaussian distribution.
-4. **Propellant Estimation**: Fuel consumption estimates presented in documentation ($1.39\text{ kg}$) are illustrative analytical figures based on an assumed $1000\text{ kg}$ spacecraft with $I_{\text{sp}} = 220\text{ s}$ hydrazine propulsion, not physical sensor measurements.
+4. **Sensor Simulation**: Ground station tracking, optical line-of-sight, radar range-Doppler, and outage intervals are simulated with parameterized Gaussian measurement noise to decouple ground truth from observation estimates.
+5. **Machine Learning Service**: The ML inference service implements the complete versioned JSON schema (v1.0), input sanitization, and physical safety validation gate. In accordance with ethical simulation standards, the inference engine executes an explicit rule-based heuristic baseline rather than fabricated deep learning weights.

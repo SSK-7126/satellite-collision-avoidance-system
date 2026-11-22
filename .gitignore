@@ -19,4 +19,9 @@ UnrealProject/DerivedDataCache/
 UnrealProject/Intermediate/
 UnrealProject/Saved/
 UnrealProject/AutoSDK/
+UnrealProject/Build/
 *.uproject.lock
+
+# Standalone Windows packaging binary distribution & archives (>100MB)
+Project_Deliverables/Windows_Package/Packaged/
+Project_Deliverables/Windows_Package/*.zip
