@@ -19,13 +19,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* AtmosphereMesh;
 
-	/** Visual Earth radius in Unreal Units (default: 63,781.37 uu at scale 0.01). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UStaticMeshComponent* StarfieldMesh;
+
+	/** Scientific physical Earth radius in Unreal Units (default: 63,781.37 uu at scale 0.01). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")
 	double EarthRadiusUe = 63781.37;
 
-	/** Atmosphere radius multiplier relative to Earth (default: 1.015, ~95.7 km physical atmosphere). */
+	/** Visual Earth radius for aesthetic mission-control framing (default: 26,000 uu).
+	 * Fills ~42% of the orbital viewport with majestic planetary curvature inside the 70,000 uu orbit. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")
-	double AtmosphereScaleMultiplier = 1.015;
+	double VisualEarthRadiusUe = 26000.0;
+
+	/** Atmosphere radius multiplier relative to Earth (default: 1.035, ~910 uu luminous rim). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")
+	double AtmosphereScaleMultiplier = 1.035;
 
 	/** Rotational speed in degrees per simulation second (Earth sidereal rotation). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")
@@ -36,6 +44,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Materials")
 	UMaterialInterface* AtmosphereMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Materials")
+	UMaterialInterface* StarfieldMaterial;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;

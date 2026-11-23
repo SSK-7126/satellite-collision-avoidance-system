@@ -11,26 +11,26 @@ AManoeuvreVisualizer::AManoeuvreVisualizer()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMeshFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> ConeMeshFinder(TEXT("/Engine/BasicShapes/Cone.Cone"));
 
-	// 1. Burn Ring Marker
+	// 1. Burn Ring Marker (Cylinder radius 50 cm, height 100 cm)
 	BurnMarkerRing = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BurnMarkerRing"));
 	RootComponent = BurnMarkerRing;
 	BurnMarkerRing->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylinderMeshFinder.Succeeded()) { BurnMarkerRing->SetStaticMesh(CylinderMeshFinder.Object); }
-	BurnMarkerRing->SetRelativeScale3D(FVector(6.0, 6.0, 0.25));
+	BurnMarkerRing->SetRelativeScale3D(FVector(4.0, 4.0, 0.4));
 
 	// 2. Delta-V Arrow Shaft (Cylinder)
 	DeltaVArrowShaft = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DeltaVArrowShaft"));
 	DeltaVArrowShaft->SetupAttachment(RootComponent);
 	DeltaVArrowShaft->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylinderMeshFinder.Succeeded()) { DeltaVArrowShaft->SetStaticMesh(CylinderMeshFinder.Object); }
-	DeltaVArrowShaft->SetRelativeScale3D(FVector(0.35, 0.35, 1.0));
+	DeltaVArrowShaft->SetRelativeScale3D(FVector(0.3, 0.3, 10.0));
 
 	// 3. Delta-V Arrow Cone Tip
 	DeltaVArrow = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DeltaVArrow"));
 	DeltaVArrow->SetupAttachment(RootComponent);
 	DeltaVArrow->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (ConeMeshFinder.Succeeded()) { DeltaVArrow->SetStaticMesh(ConeMeshFinder.Object); }
-	DeltaVArrow->SetRelativeScale3D(FVector(0.8, 0.8, 1.2));
+	DeltaVArrow->SetRelativeScale3D(FVector(0.8, 0.8, 3.5));
 }
 
 void AManoeuvreVisualizer::OnConstruction(const FTransform& Transform)
@@ -63,16 +63,16 @@ void AManoeuvreVisualizer::ApplyVisualizerMaterials()
 
 	if (!BaseMat) return;
 
-	// 1. Burn Ring Material (Electric Purple)
+	// 1. Burn Ring Material (Vibrant Burn Green matching reference)
 	if (BurnMarkerRing)
 	{
 		UMaterialInstanceDynamic* RingMat = UMaterialInstanceDynamic::Create(BaseMat, this);
 		if (RingMat)
 		{
-			FLinearColor RingCol = FLinearColor(0.85f, 0.3f, 1.0f, 1.0f);
+			FLinearColor RingCol = FLinearColor(0.0f, 0.95f, 0.45f, 1.0f);
 			RingMat->SetVectorParameterValue(TEXT("Color"), RingCol);
 			RingMat->SetVectorParameterValue(TEXT("BaseColor"), RingCol);
-			RingMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 1.5f);
+			RingMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 2.0f);
 			BurnMarkerRing->SetMaterial(0, RingMat);
 		}
 	}
@@ -81,10 +81,10 @@ void AManoeuvreVisualizer::ApplyVisualizerMaterials()
 	UMaterialInstanceDynamic* ArrowMat = UMaterialInstanceDynamic::Create(BaseMat, this);
 	if (ArrowMat)
 	{
-		FLinearColor ArrowCol = FLinearColor(0.1f, 1.0f, 0.35f, 1.0f);
+		FLinearColor ArrowCol = FLinearColor(0.0f, 1.0f, 0.4f, 1.0f);
 		ArrowMat->SetVectorParameterValue(TEXT("Color"), ArrowCol);
 		ArrowMat->SetVectorParameterValue(TEXT("BaseColor"), ArrowCol);
-		ArrowMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 1.8f);
+		ArrowMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 2.0f);
 		if (DeltaVArrowShaft) { DeltaVArrowShaft->SetMaterial(0, ArrowMat); }
 		if (DeltaVArrow) { DeltaVArrow->SetMaterial(0, ArrowMat); }
 	}
@@ -93,6 +93,10 @@ void AManoeuvreVisualizer::ApplyVisualizerMaterials()
 void AManoeuvreVisualizer::SetManoeuvreGeometry(const FVector& BurnLocationUe, const FVector& DeltaVVectorUe, double DeltaVMagnitudeMps)
 {
 	SetActorLocation(BurnLocationUe);
+	if (BurnMarkerRing)
+	{
+		BurnMarkerRing->SetWorldScale3D(FVector(3.5, 3.5, 0.35));
+	}
 
 	if (!DeltaVVectorUe.IsNearlyZero(1e-6))
 	{
@@ -101,17 +105,16 @@ void AManoeuvreVisualizer::SetManoeuvreGeometry(const FVector& BurnLocationUe, c
 		const FRotator Rot = FRotationMatrix::MakeFromZ(Direction).Rotator();
 
 		// Scale arrow length proportional to delta-v magnitude
-		// DeltaV of 3.0 m/s -> Total arrow length ~ 800 cm (8 uu)
-		const double TotalArrowLength = FMath::Clamp(DeltaVMagnitudeMps * 250.0, 200.0, 1500.0);
-		const double ConeLength = 120.0;
-		const double ShaftLength = FMath::Max(TotalArrowLength - ConeLength, 80.0);
+		const double TotalArrowLength = FMath::Clamp(DeltaVMagnitudeMps * 380.0, 750.0, 1800.0);
+		const double ConeLength = 280.0;
+		const double ShaftLength = FMath::Max(TotalArrowLength - ConeLength, 320.0);
 
 		// Position shaft from 0 to ShaftLength
 		if (DeltaVArrowShaft)
 		{
 			DeltaVArrowShaft->SetWorldRotation(Rot);
 			DeltaVArrowShaft->SetWorldLocation(BurnLocationUe + Direction * (ShaftLength * 0.5));
-			DeltaVArrowShaft->SetWorldScale3D(FVector(0.35, 0.35, ShaftLength / 100.0));
+			DeltaVArrowShaft->SetWorldScale3D(FVector(0.22, 0.22, ShaftLength / 100.0));
 		}
 
 		// Position cone tip at the end of the shaft
@@ -119,7 +122,7 @@ void AManoeuvreVisualizer::SetManoeuvreGeometry(const FVector& BurnLocationUe, c
 		{
 			DeltaVArrow->SetWorldRotation(Rot);
 			DeltaVArrow->SetWorldLocation(BurnLocationUe + Direction * ShaftLength);
-			DeltaVArrow->SetWorldScale3D(FVector(0.8, 0.8, ConeLength / 100.0));
+			DeltaVArrow->SetWorldScale3D(FVector(0.55, 0.55, ConeLength / 100.0));
 		}
 	}
 

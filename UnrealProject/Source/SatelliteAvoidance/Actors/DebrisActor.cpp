@@ -24,7 +24,9 @@ ADebrisActor::ADebrisActor()
 	// 1. Primary irregular jagged core
 	DebrisMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DebrisMesh"));
 	DebrisMesh->SetupAttachment(VisualRoot);
-	DebrisMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DebrisMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	DebrisMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	DebrisMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	if (ConeMeshFinder.Succeeded()) { DebrisMesh->SetStaticMesh(ConeMeshFinder.Object); }
 	DebrisMesh->SetRelativeScale3D(FVector(2.2, 1.6, 2.4));
 	DebrisMesh->SetRelativeRotation(FRotator(35.0, 45.0, 20.0));
@@ -98,6 +100,9 @@ void ADebrisActor::OnConstruction(const FTransform& Transform)
 void ADebrisActor::BeginPlay()
 {
 	Super::BeginPlay();
+#if WITH_EDITOR
+	SetIsSpatiallyLoaded(false);
+#endif
 
 	SetActorScale3D(FVector(1.0, 1.0, 1.0));
 	if (SceneRoot)

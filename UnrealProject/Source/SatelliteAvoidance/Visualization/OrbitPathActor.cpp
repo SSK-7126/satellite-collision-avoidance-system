@@ -5,6 +5,9 @@
 AOrbitPathActor::AOrbitPathActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
+#if WITH_EDITOR
+	SetIsSpatiallyLoaded(false);
+#endif
 
 	TrajectorySpline = CreateDefaultSubobject<USplineComponent>(TEXT("TrajectorySpline"));
 	RootComponent = TrajectorySpline;
@@ -44,7 +47,6 @@ void AOrbitPathActor::ClearSplineMeshes()
 	{
 		if (MeshComp && IsValid(MeshComp))
 		{
-			MeshComp->UnregisterComponent();
 			MeshComp->DestroyComponent();
 		}
 	}
@@ -56,16 +58,7 @@ void AOrbitPathActor::BuildSplineMeshGeometry()
 	const int32 NumPoints = TrajectorySpline->GetNumberOfSplinePoints();
 	if (NumPoints < 2) return;
 
-	// Ensure no duplicate meshes exist before constructing
-	for (USplineMeshComponent* MeshComp : SplineMeshes)
-	{
-		if (MeshComp && IsValid(MeshComp))
-		{
-			MeshComp->UnregisterComponent();
-			MeshComp->DestroyComponent();
-		}
-	}
-	SplineMeshes.Empty();
+	ClearSplineMeshes();
 
 	UStaticMesh* CylinderMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (!CylinderMesh) return;
@@ -84,15 +77,20 @@ void AOrbitPathActor::BuildSplineMeshGeometry()
 		{
 			DynMat->SetVectorParameterValue(TEXT("Color"), PathColor);
 			DynMat->SetVectorParameterValue(TEXT("BaseColor"), PathColor);
-			DynMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 0.35f);
+			DynMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 1.8f);
 		}
 	}
 
-	const float RadiusScale = PathThickness / 50.0f; // Cylinder default radius is 50 cm -> scale gives exact PathThickness width in uu
+	const float RadiusScale = PathThickness / 50.0f; // Cylinder default radius is 50 cm
 	const bool bIsHidden = IsHidden();
 
 	for (int32 i = 0; i < NumPoints - 1; ++i)
 	{
+		if (bIsDashed && ((i / 3) % 2 == 1))
+		{
+			continue; // Elegant dashed trajectory segments matching reference design
+		}
+
 		const FVector StartPos = TrajectorySpline->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World);
 		const FVector StartTangent = TrajectorySpline->GetTangentAtSplinePoint(i, ESplineCoordinateSpace::World);
 		const FVector EndPos = TrajectorySpline->GetLocationAtSplinePoint(i + 1, ESplineCoordinateSpace::World);

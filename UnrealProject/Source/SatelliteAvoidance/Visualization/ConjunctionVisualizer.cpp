@@ -16,14 +16,14 @@ AConjunctionVisualizer::AConjunctionVisualizer()
 	RootComponent = TcaMarkerSphere;
 	TcaMarkerSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (SphereMeshFinder.Succeeded()) { TcaMarkerSphere->SetStaticMesh(SphereMeshFinder.Object); }
-	TcaMarkerSphere->SetRelativeScale3D(FVector(0.04, 0.04, 0.04));
+	TcaMarkerSphere->SetRelativeScale3D(FVector(4.0, 4.0, 4.0));
 
 	// 2. Secondary Debris TCA Marker
 	DebrisTcaMarkerSphere = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DebrisTcaMarkerSphere"));
 	DebrisTcaMarkerSphere->SetupAttachment(RootComponent);
 	DebrisTcaMarkerSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (SphereMeshFinder.Succeeded()) { DebrisTcaMarkerSphere->SetStaticMesh(SphereMeshFinder.Object); }
-	DebrisTcaMarkerSphere->SetRelativeScale3D(FVector(0.04, 0.04, 0.04));
+	DebrisTcaMarkerSphere->SetRelativeScale3D(FVector(4.0, 4.0, 4.0));
 
 	// 3. Miss Distance Connecting Line
 	MissDistanceLine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MissDistanceLine"));
@@ -32,12 +32,14 @@ AConjunctionVisualizer::AConjunctionVisualizer()
 	if (CylinderMeshFinder.Succeeded()) { MissDistanceLine->SetStaticMesh(CylinderMeshFinder.Object); }
 	MissDistanceLine->SetRelativeScale3D(FVector(0.02, 0.02, 1.0));
 
-	// 4. Encounter Plane Disc
+	// 4. Encounter Plane Disc (Hidden to prevent unexplained pink circular surface)
 	EncounterPlaneDisc = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EncounterPlaneDisc"));
 	EncounterPlaneDisc->SetupAttachment(RootComponent);
 	EncounterPlaneDisc->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	if (CylinderMeshFinder.Succeeded()) { EncounterPlaneDisc->SetStaticMesh(CylinderMeshFinder.Object); }
 	EncounterPlaneDisc->SetRelativeScale3D(FVector(1.0, 1.0, 0.005));
+	EncounterPlaneDisc->SetVisibility(false);
+	EncounterPlaneDisc->SetHiddenInGame(true);
 }
 
 void AConjunctionVisualizer::OnConstruction(const FTransform& Transform)
@@ -77,16 +79,16 @@ void AConjunctionVisualizer::ApplyVisualizerMaterials()
 
 	if (!BaseMat) return;
 
-	// 1. Primary Satellite TCA Marker (Vibrant Amber / Gold)
+	// 1. Primary Satellite TCA Marker (Vibrant Red matching approved design)
 	if (TcaMarkerSphere)
 	{
 		UMaterialInstanceDynamic* TcaMat = UMaterialInstanceDynamic::Create(BaseMat, this);
 		if (TcaMat)
 		{
-			FLinearColor TcaCol = FLinearColor(1.0f, 0.82f, 0.05f, 1.0f);
+			FLinearColor TcaCol = FLinearColor(1.0f, 0.12f, 0.18f, 1.0f);
 			TcaMat->SetVectorParameterValue(TEXT("Color"), TcaCol);
 			TcaMat->SetVectorParameterValue(TEXT("BaseColor"), TcaCol);
-			TcaMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 1.6f);
+			TcaMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 2.5f);
 			TcaMarkerSphere->SetMaterial(0, TcaMat);
 		}
 	}
@@ -97,10 +99,10 @@ void AConjunctionVisualizer::ApplyVisualizerMaterials()
 		UMaterialInstanceDynamic* DebTcaMat = UMaterialInstanceDynamic::Create(BaseMat, this);
 		if (DebTcaMat)
 		{
-			FLinearColor DebTcaCol = FLinearColor(1.0f, 0.15f, 0.1f, 1.0f);
+			FLinearColor DebTcaCol = FLinearColor(1.0f, 0.35f, 0.08f, 1.0f);
 			DebTcaMat->SetVectorParameterValue(TEXT("Color"), DebTcaCol);
 			DebTcaMat->SetVectorParameterValue(TEXT("BaseColor"), DebTcaCol);
-			DebTcaMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 1.6f);
+			DebTcaMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 2.0f);
 			DebrisTcaMarkerSphere->SetMaterial(0, DebTcaMat);
 		}
 	}
@@ -111,10 +113,10 @@ void AConjunctionVisualizer::ApplyVisualizerMaterials()
 		UMaterialInstanceDynamic* LineMat = UMaterialInstanceDynamic::Create(BaseMat, this);
 		if (LineMat)
 		{
-			FLinearColor LineCol = FLinearColor(1.0f, 0.05f, 0.70f, 1.0f);
+			FLinearColor LineCol = FLinearColor(1.0f, 0.08f, 0.75f, 1.0f);
 			LineMat->SetVectorParameterValue(TEXT("Color"), LineCol);
 			LineMat->SetVectorParameterValue(TEXT("BaseColor"), LineCol);
-			LineMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 2.0f);
+			LineMat->SetScalarParameterValue(TEXT("EmissiveMultiplier"), 2.5f);
 			MissDistanceLine->SetMaterial(0, LineMat);
 		}
 	}
@@ -136,9 +138,8 @@ void AConjunctionVisualizer::UpdateConjunctionGeometry(const FVector& SatTcaPos,
 {
 	SetActorLocation(SatTcaPos);
 
-	// Sphere mesh radius is 50 uu -> scale 0.018 gives 1.8 uu diameter (radius 0.9 uu)
-	// For a 15.63 uu miss distance, 1.8 uu diameter marker spheres are crisp, distinct, and visible without overlapping
-	const FVector MarkerScale = FVector(0.018, 0.018, 0.018);
+	// Sphere mesh radius is 50 uu -> scale 3.5 gives 350 uu diameter marker (visible as crisp glowing red dot along orbit)
+	const FVector MarkerScale = FVector(3.5, 3.5, 3.5);
 
 	if (TcaMarkerSphere)
 	{
@@ -160,17 +161,11 @@ void AConjunctionVisualizer::UpdateConjunctionGeometry(const FVector& SatTcaPos,
 		MissDistanceLine->SetWorldLocation(MidPoint);
 		const FRotator Rot = FRotationMatrix::MakeFromZ(Dir).Rotator();
 		MissDistanceLine->SetWorldRotation(Rot);
-		// Cylinder default height is 100 cm, radius is 50 cm -> scale (0.006, 0.006) gives 0.6 uu diameter connector
-		MissDistanceLine->SetWorldScale3D(FVector(0.006, 0.006, Dist / 100.0));
+		MissDistanceLine->SetWorldScale3D(FVector(0.25, 0.25, Dist / 100.0));
 
-		// Center the encounter plane disc at MidPoint between both objects
-		EncounterPlaneDisc->SetWorldLocation(MidPoint);
-		// Disc circular face oriented obliquely to miss distance vector for 3D depth
-		const FRotator DiscRot = FRotator(Rot.Pitch - 45.0f, Rot.Yaw + 35.0f, 0.0f);
-		EncounterPlaneDisc->SetWorldRotation(DiscRot);
-		// Disc radius 12 uu (diameter 24 uu) neatly frames the 15.63 uu encounter
-		const double PlaneRadius = FMath::Clamp(Dist * 0.8, 10.0, 30.0);
-		EncounterPlaneDisc->SetWorldScale3D(FVector(PlaneRadius / 50.0, PlaneRadius / 50.0, 0.002));
+		// Hide encounter plane disc to prevent large pink circular surface
+		EncounterPlaneDisc->SetVisibility(false);
+		EncounterPlaneDisc->SetHiddenInGame(true);
 	}
 
 	ApplyVisualizerMaterials();

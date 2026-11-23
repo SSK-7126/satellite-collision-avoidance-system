@@ -21,9 +21,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* VisualRoot;
 
-	// Independent visual scale factor for debris meshes (does not alter scientific position)
+	// Independent visual scale factor for debris meshes (prominently visible without altering scientific coordinates)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual Scaling")
-	float VisualMeshScale = 0.40f;
+	float VisualMeshScale = 18.0f;
 
 	// Primary irregular jagged fragment core
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

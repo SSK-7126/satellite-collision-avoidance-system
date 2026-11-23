@@ -22,7 +22,10 @@ public:
 	FLinearColor PathColor = FLinearColor(0.0f, 0.85f, 1.0f, 1.0f); // Default Cyan
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visuals")
-	float PathThickness = 3.5f; // Sleek, crisp orbital trajectory ribbon width
+	float PathThickness = 120.0f; // Clean, thin, elegant orbital trajectory curves
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visuals")
+	bool bIsDashed = false;
 
 	UPROPERTY()
 	TArray<USplineMeshComponent*> SplineMeshes;
