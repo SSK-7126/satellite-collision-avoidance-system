@@ -1,0 +1,28 @@
+{
+  "dataset": "ESA Collision Avoidance Challenge (Kelvins)",
+  "target": "risk [base 10 log]",
+  "n_features": 33,
+  "kan_architecture": [
+    33,
+    8,
+    1
+  ],
+  "grid": 5,
+  "k": 3,
+  "test_metrics": [
+    {
+      "Model": "PyKAN",
+      "Split": "Test",
+      "MAE": 5.5769,
+      "RMSE": 7.3399,
+      "R\u00b2": 0.4604
+    },
+    {
+      "Model": "Ridge (Baseline)",
+      "Split": "Test",
+      "MAE": 6.6249,
+      "RMSE": 7.9566,
+      "R\u00b2": 0.366
+    }
+  ]
+}

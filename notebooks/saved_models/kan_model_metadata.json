@@ -1,0 +1,26 @@
+{
+  "features": [
+    "ln_miss",
+    "ln_vrel",
+    "ln_sx",
+    "ln_sy",
+    "rho",
+    "ln_hbr",
+    "norm_miss",
+    "sx_sy_ratio"
+  ],
+  "target": "log10_pc",
+  "architecture": [
+    8,
+    6,
+    4,
+    1
+  ],
+  "grid": 20,
+  "k": 3,
+  "n_train": 1600,
+  "n_test": 400,
+  "test_mae": 7.487117767333984,
+  "test_rmse": 8.026341938703595,
+  "test_r2": -0.00013709068298339844
+}

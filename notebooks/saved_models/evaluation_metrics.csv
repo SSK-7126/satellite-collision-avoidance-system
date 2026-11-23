@@ -1,0 +1,7 @@
+Model,Split,MAE,RMSE,R²
+PyKAN,Train,5.6141,7.3278,0.4638
+PyKAN,Validation,5.5987,7.3413,0.4661
+PyKAN,Test,5.5769,7.3399,0.4604
+Ridge (Baseline),Train,6.6721,7.9877,0.3629
+Ridge (Baseline),Validation,6.7029,8.0343,0.3606
+Ridge (Baseline),Test,6.6249,7.9566,0.366
