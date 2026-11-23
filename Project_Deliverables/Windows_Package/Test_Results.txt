@@ -1,0 +1,187 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.4, pytest-9.1.1, pluggy-1.7.0 -- C:\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Sriram Krovi\satellite-collision-avoidance-system
+plugins: anyio-4.15.1, platformdirs-4.14.0
+collecting ... collected 144 items
+
+tests/test_catalogue.py::test_tle_checksum_computation PASSED            [  0%]
+tests/test_catalogue.py::test_valid_tle_parsing PASSED                   [  1%]
+tests/test_catalogue.py::test_malformed_tle_checksum_rejection PASSED    [  2%]
+tests/test_catalogue.py::test_mismatched_norad_ids_rejection PASSED      [  2%]
+tests/test_catalogue.py::test_omm_json_parsing PASSED                    [  3%]
+tests/test_catalogue.py::test_omm_csv_parsing PASSED                     [  4%]
+tests/test_catalogue.py::test_celestrak_caching_and_offline_fallback PASSED [  4%]
+tests/test_catalogue.py::test_spacetrack_unconfigured_policy PASSED      [  5%]
+tests/test_catalogue.py::test_catalogue_registry_tracking_and_persistence PASSED [  6%]
+tests/test_conjunction_screening.py::test_orbital_shell_overlap_filter PASSED [  6%]
+tests/test_conjunction_screening.py::test_coarse_screening_and_tca_refinement PASSED [  7%]
+tests/test_conjunction_screening.py::test_strict_missing_covariance_rules PASSED [  8%]
+tests/test_conjunction_screening.py::test_validated_covariance_pc_calculation PASSED [  9%]
+tests/test_conjunction_screening.py::test_alert_severity_and_lifecycle PASSED [  9%]
+tests/test_conjunction_screening.py::test_cdm_parser_json PASSED         [ 10%]
+tests/test_custom_objects.py::test_keplerian_cartesian_roundtrip PASSED  [ 11%]
+tests/test_custom_objects.py::test_kepler_equation_true_vs_mean_anomaly PASSED [ 11%]
+tests/test_custom_objects.py::test_high_eccentricity_and_geo_orbits PASSED [ 12%]
+tests/test_custom_objects.py::test_unphysical_orbital_parameters_rejection PASSED [ 13%]
+tests/test_custom_objects.py::test_custom_satellite_crud PASSED          [ 13%]
+tests/test_custom_objects.py::test_custom_debris_crud_with_unknown_properties PASSED [ 14%]
+tests/test_custom_objects.py::test_scenario_isolation_and_reset PASSED   [ 15%]
+tests/test_hardware_resources.py::test_tsiolkovsky_propellant_estimation PASSED [ 15%]
+tests/test_hardware_resources.py::test_zero_delta_v_consumption PASSED   [ 16%]
+tests/test_hardware_resources.py::test_invalid_propellant_inputs_rejection PASSED [ 17%]
+tests/test_hardware_resources.py::test_delta_v_capacity_calculation PASSED [ 18%]
+tests/test_hardware_resources.py::test_hardware_registry_burn_recording_and_exhaustion PASSED [ 18%]
+tests/test_kan_integration.py::test_api_health PASSED                    [ 19%]
+tests/test_kan_integration.py::test_api_model_info PASSED                [ 20%]
+tests/test_kan_integration.py::test_api_predict_direct_33_features PASSED [ 20%]
+tests/test_kan_integration.py::test_api_predict_state_insufficient_data PASSED [ 21%]
+tests/test_kan_integration.py::test_scenario_compatibility_audit PASSED  [ 22%]
+tests/test_kan_integration.py::test_api_catalogue_search_and_tracking PASSED [ 22%]
+tests/test_kan_integration.py::test_api_custom_objects_and_scenario_reset PASSED [ 23%]
+tests/test_kan_integration.py::test_api_conjunction_alerts_and_decision_support PASSED [ 24%]
+tests/test_manoeuvre_decision_support.py::test_rtn_basis_orthonormality PASSED [ 25%]
+tests/test_manoeuvre_decision_support.py::test_manoeuvre_options_generation_and_clearance PASSED [ 25%]
+tests/test_manoeuvre_decision_support.py::test_insufficient_hardware_graceful_handling PASSED [ 26%]
+tests/test_manoeuvre_decision_support.py::test_human_approval_workflow PASSED [ 27%]
+tests/test_ml_service.py::test_valid_inference_request PASSED            [ 27%]
+tests/test_ml_service.py::test_wrong_frame_rejection PASSED              [ 28%]
+tests/test_ml_service.py::test_stale_timestamp_rejection PASSED          [ 29%]
+tests/test_ml_service.py::test_unphysical_input_rejection PASSED         [ 29%]
+tests/test_ml_service.py::test_untrusted_proposal_validation_gate PASSED [ 30%]
+tests/test_performance_benchmarks.py::test_sgp4_propagation_throughput PASSED [ 31%]
+tests/test_performance_benchmarks.py::test_conjunction_screening_filter_efficiency PASSED [ 31%]
+tests/test_performance_benchmarks.py::test_foster_collision_probability_latency PASSED [ 32%]
+tests/test_performance_benchmarks.py::test_decision_support_planner_latency PASSED [ 33%]
+tests/test_scenarios.py::test_s0_circular_orbit PASSED                   [ 34%]
+tests/test_scenarios.py::test_s1_elliptical_orbit PASSED                 [ 34%]
+tests/test_scenarios.py::test_s2_close_approach PASSED                   [ 35%]
+tests/test_scenarios.py::test_s3_uncertain_conjunction PASSED            [ 36%]
+tests/test_scenarios.py::test_s4_avoidance_burn PASSED                   [ 36%]
+tests/test_scenarios.py::test_s5_multiple_debris PASSED                  [ 37%]
+tests/test_scenarios.py::test_s6_perturbed_leo PASSED                    [ 38%]
+tests/test_scenarios.py::test_s7_sensor_outage PASSED                    [ 38%]
+tests/test_scenarios.py::test_s8_safe_pass PASSED                        [ 39%]
+tests/test_sensors.py::test_truth_vs_observation_separation PASSED       [ 40%]
+tests/test_sensors.py::test_optical_sensor_geometry_and_noise PASSED     [ 40%]
+tests/test_sensors.py::test_radar_sensor_range_and_doppler PASSED        [ 41%]
+tests/test_sensors.py::test_ground_station_visibility_mask PASSED        [ 42%]
+tests/test_sensors.py::test_sensor_outage_injection PASSED               [ 43%]
+tests/test_sgp4_propagation.py::test_teme_to_j2000_magnitude_invariance PASSED [ 43%]
+tests/test_sgp4_propagation.py::test_teme_to_j2000_multi_epoch_orthonormality PASSED [ 44%]
+tests/test_sgp4_propagation.py::test_j2000_to_unreal_coordinate_parity PASSED [ 45%]
+tests/test_sgp4_propagation.py::test_sgp4_single_object_propagation PASSED [ 45%]
+tests/test_sgp4_propagation.py::test_multi_object_grid_propagation_and_cache PASSED [ 46%]
+tests/test_sgp4_propagation.py::test_propagation_cancellation PASSED     [ 47%]
+tests/test_sgp4_propagation.py::test_teme_to_j2000_against_skyfield_reference PASSED [ 47%]
+tests/test_sgp4_propagation.py::test_velocity_transformation_derivative_error_bound PASSED [ 48%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_1_navigating_directly_to_step8_before_tca_does_not_show_completion PASSED [ 49%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_2_reaching_tca_without_evaluating_state_does_not_show_completion PASSED [ 50%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_3_valid_evaluated_separation_above_threshold_shows_completion PASSED [ 50%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_4_evaluated_separation_below_threshold_does_not_show_clearance_achieved PASSED [ 51%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_miss_distance_does_not_show_completion[None] PASSED [ 52%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_miss_distance_does_not_show_completion[nan] PASSED [ 52%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_miss_distance_does_not_show_completion[inf] PASSED [ 53%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_miss_distance_does_not_show_completion[-500.0] PASSED [ 54%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_miss_distance_does_not_show_completion[0.0] PASSED [ 54%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_tca_does_not_show_completion[None] PASSED [ 55%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_tca_does_not_show_completion[nan] PASSED [ 56%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_tca_does_not_show_completion[inf] PASSED [ 56%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_tca_does_not_show_completion[-1.0] PASSED [ 57%]
+tests/test_step8_completion_gate.py::TestStep8CompletionGate::test_requirement_5_missing_or_invalid_tca_does_not_show_completion[0.0] PASSED [ 58%]
+D2/tests/test_conjunction.py::test_controlled_close_approach PASSED      [ 59%]
+D2/tests/test_conjunction.py::test_safe_pass PASSED                      [ 59%]
+D2/tests/test_conjunction.py::test_near_zero_relative_velocity PASSED    [ 60%]
+D2/tests/test_conjunction.py::test_window_constraints PASSED             [ 61%]
+D2/tests/test_conjunction.py::test_miss_distance_non_negativity PASSED   [ 61%]
+D2/tests/test_conjunction.py::test_linear_vs_numerical_comparison PASSED [ 62%]
+D2/tests/test_conjunction.py::test_batch_catalog_screening PASSED        [ 63%]
+D2/tests/test_manoeuvres.py::test_no_collision_risk PASSED               [ 63%]
+D2/tests/test_manoeuvres.py::test_controlled_close_approach_avoidance PASSED [ 64%]
+D2/tests/test_manoeuvres.py::test_different_burn_times PASSED            [ 65%]
+D2/tests/test_manoeuvres.py::test_different_delta_v_directions PASSED    [ 65%]
+D2/tests/test_manoeuvres.py::test_exceeding_delta_v_limit PASSED         [ 66%]
+D2/tests/test_manoeuvres.py::test_covariance_unavailable PASSED          [ 67%]
+D2/tests/test_manoeuvres.py::test_no_feasible_manoeuvre PASSED           [ 68%]
+D2/tests/test_manoeuvres.py::test_post_manoeuvre_tca_covariance_synchronization PASSED [ 68%]
+D2/tests/test_manoeuvres.py::test_collision_probability_numerical_validation PASSED [ 69%]
+D2/tests/test_manoeuvres.py::test_optimizer_safety_priority_validation PASSED [ 70%]
+D2/tests/test_manoeuvres.py::test_burn_time_and_frame_validation PASSED  [ 70%]
+D2/tests/test_manoeuvres.py::test_regression_all_suites PASSED           [ 71%]
+D2/tests/test_orbital_covariance.py::test_gravity_gradient_properties PASSED [ 72%]
+D2/tests/test_orbital_covariance.py::test_symplecticity_validation PASSED [ 72%]
+D2/tests/test_orbital_covariance.py::test_finite_difference_convergence PASSED [ 73%]
+D2/tests/test_orbital_covariance.py::test_covariance_propagation_checks PASSED [ 74%]
+D2/tests/test_orbital_covariance.py::test_collision_probability_consistency PASSED [ 75%]
+D2/tests/test_orbital_covariance.py::test_linear_vs_orbital_divergence PASSED [ 75%]
+D2/tests/test_perturbations.py::test_two_body_baseline_identity PASSED   [ 76%]
+D2/tests/test_perturbations.py::test_j2_acceleration_geometry_and_magnitude PASSED [ 77%]
+D2/tests/test_perturbations.py::test_atmospheric_drag_dissipation PASSED [ 77%]
+D2/tests/test_perturbations.py::test_drag_causes_orbital_decay PASSED    [ 78%]
+D2/tests/test_propulsion.py::test_propulsion_parameters_validation PASSED [ 79%]
+D2/tests/test_propulsion.py::test_tsiolkovsky_hand_checkable_cases PASSED [ 79%]
+D2/tests/test_propulsion.py::test_finite_burn_propagation PASSED         [ 80%]
+D2/tests/test_propulsion.py::test_propellant_exhaustion_rejection PASSED [ 81%]
+D2/tests/test_propulsion.py::test_manoeuvre_execution_uncertainty PASSED [ 81%]
+D2/tests/test_rk4.py::test_rk4_step_basic PASSED                         [ 82%]
+D2/tests/test_rk4.py::test_rk4_convergence_scaling PASSED                [ 83%]
+D2/tests/test_uncertainty.py::test_valid_covariance PASSED               [ 84%]
+D2/tests/test_uncertainty.py::test_invalid_dimensions PASSED             [ 84%]
+D2/tests/test_uncertainty.py::test_asymmetric_covariance_rejection PASSED [ 85%]
+D2/tests/test_uncertainty.py::test_positive_semidefinite_validation PASSED [ 86%]
+D2/tests/test_uncertainty.py::test_independent_covariance_combination PASSED [ 86%]
+D2/tests/test_uncertainty.py::test_covariance_propagation PASSED         [ 87%]
+D2/tests/test_uncertainty.py::test_missing_covariance_handling PASSED    [ 88%]
+D2/tests/test_uncertainty.py::test_numerical_collision_probability PASSED [ 88%]
+D2/tests/test_uncertainty.py::test_quality_flags_and_consequence_indicators PASSED [ 89%]
+D2/tests/test_visualization.py::test_coordinate_transformation_invariants PASSED [ 90%]
+D2/tests/test_visualization.py::test_orientation_calculation PASSED      [ 90%]
+D2/tests/test_visualization.py::test_trajectory_vectorized_transformation PASSED [ 91%]
+D2/tests/test_visualization.py::test_json_payload_schema_and_contract PASSED [ 92%]
+D2/tests/test_visualization.py::test_demonstration_sequence_milestones PASSED [ 93%]
+D2/tests/test_visualization.py::test_scientific_solver_separation PASSED [ 93%]
+backend/KAN/tests/test_kan_model.py::test_checkpoint_and_preprocessor_loading PASSED [ 94%]
+backend/KAN/tests/test_kan_model.py::test_feature_names_order PASSED     [ 95%]
+backend/KAN/tests/test_kan_model.py::test_invalid_feature_dimension PASSED [ 95%]
+backend/KAN/tests/test_kan_model.py::test_nan_and_inf_rejection PASSED   [ 96%]
+backend/KAN/tests/test_kan_model.py::test_inference_output_and_pc_conversion PASSED [ 97%]
+backend/KAN/tests/test_kan_model.py::test_underflow_safety PASSED        [ 97%]
+backend/KAN/tests/test_kan_model.py::test_coordinate_transforms PASSED   [ 98%]
+backend/KAN/tests/test_kan_model.py::test_icps_state_insufficient_data PASSED [ 99%]
+backend/KAN/tests/test_kan_model.py::test_icps_state_full_derivation PASSED [100%]
+
+============================== warnings summary ===============================
+tests\test_kan_integration.py:11
+  C:\Users\Sriram Krovi\satellite-collision-avoidance-system\tests\test_kan_integration.py:11: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/test_kan_integration.py::test_api_predict_direct_33_features
+backend/KAN/tests/test_kan_model.py::test_inference_output_and_pc_conversion
+backend/KAN/tests/test_kan_model.py::test_underflow_safety
+backend/KAN/tests/test_kan_model.py::test_icps_state_full_derivation
+  C:\Users\Sriram Krovi\satellite-collision-avoidance-system\backend\KAN\src\kan\MultKAN.py:813: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\aten\src\ATen\native\ReduceOps.cpp:1879.)
+    self.subnode_actscale.append(torch.std(x, dim=0).detach())
+
+tests/test_kan_integration.py::test_api_predict_direct_33_features
+backend/KAN/tests/test_kan_model.py::test_inference_output_and_pc_conversion
+backend/KAN/tests/test_kan_model.py::test_underflow_safety
+backend/KAN/tests/test_kan_model.py::test_icps_state_full_derivation
+  C:\Users\Sriram Krovi\satellite-collision-avoidance-system\backend\KAN\src\kan\MultKAN.py:823: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\aten\src\ATen\native\ReduceOps.cpp:1879.)
+    input_range = torch.std(preacts, dim=0) + 0.1
+
+tests/test_kan_integration.py::test_api_predict_direct_33_features
+backend/KAN/tests/test_kan_model.py::test_inference_output_and_pc_conversion
+backend/KAN/tests/test_kan_model.py::test_underflow_safety
+backend/KAN/tests/test_kan_model.py::test_icps_state_full_derivation
+  C:\Users\Sriram Krovi\satellite-collision-avoidance-system\backend\KAN\src\kan\MultKAN.py:824: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\aten\src\ATen\native\ReduceOps.cpp:1879.)
+    output_range_spline = torch.std(postacts_numerical, dim=0) # for training, only penalize the spline part
+
+tests/test_kan_integration.py::test_api_predict_direct_33_features
+backend/KAN/tests/test_kan_model.py::test_inference_output_and_pc_conversion
+backend/KAN/tests/test_kan_model.py::test_underflow_safety
+backend/KAN/tests/test_kan_model.py::test_icps_state_full_derivation
+  C:\Users\Sriram Krovi\satellite-collision-avoidance-system\backend\KAN\src\kan\MultKAN.py:825: UserWarning: std(): degrees of freedom is <= 0. Correction should be strictly less than the reduction factor (input numel divided by output numel). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\aten\src\ATen\native\ReduceOps.cpp:1879.)
+    output_range = torch.std(postacts, dim=0) # for visualization, include the contribution from both spline + symbolic
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 144 passed, 17 warnings in 45.47s ======================
