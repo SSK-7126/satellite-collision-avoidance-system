@@ -1,0 +1,40 @@
+{
+  "source_commit": "0db16308679265aa495740a937f3eedd1ebf6545",
+  "files": [
+    {
+      "file": "backend/KAN/models/kan_esa_model.pt",
+      "size": 5458825,
+      "sha256": "8b3c9799dc246dfe80428ec9ad5f9ce41f5bfaa0d4ee4292f27c21b927d9ee63"
+    },
+    {
+      "file": "backend/KAN/models/kan_collision_model.pt",
+      "size": 502100,
+      "sha256": "c741a3119a26ff360041bcc5971864447c920b83fe27c62c7a671045f240d0aa"
+    },
+    {
+      "file": "backend/KAN/models/preprocessor.pkl",
+      "size": 3186,
+      "sha256": "46a4b9395aa14184133a118dd395f9eb2678b3b0d20c2f2ea3407f45eacc7529"
+    },
+    {
+      "file": "backend/KAN/models/model_metadata.json",
+      "size": 477,
+      "sha256": "0967f860e781574de42e17e24a7a2d8f098610588bc26cc2c38f3e4a700d4497"
+    },
+    {
+      "file": "backend/KAN/models/feature_names.json",
+      "size": 747,
+      "sha256": "9719348439e2012981ca225ee4f14d4ee8d3510ec9a07377570b954b6171ad05"
+    },
+    {
+      "file": "backend/KAN/models/evaluation_metrics.csv",
+      "size": 263,
+      "sha256": "7b89b4e8156df34ea478396eb64092f7e142e411fc664b46e61f329c0243cc21"
+    },
+    {
+      "file": "backend/KAN/notebooks/kan_collision_prediction.ipynb",
+      "size": 51332,
+      "sha256": "9bb516938c231096d0031d9e4abfe09f9f53ecfea00c51c54cb94b6274cd8084"
+    }
+  ]
+}

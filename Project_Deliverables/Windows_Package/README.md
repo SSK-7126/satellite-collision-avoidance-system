@@ -1,96 +1,60 @@
 # ICPS Satellite Collision Avoidance System — Standalone Windows Application
 
-Autonomous Satellite Collision Avoidance Demonstration
-**Target Platform:** Windows 64-bit (x64)
-**Build Configuration:** Shipping
-**Engine:** Unreal Engine 5.7.4
+**Autonomous Satellite Collision Avoidance & Dual-Model Mission Control**  
+**Target Platform:** Windows 64-bit (x64)  
+**Build Configuration:** Shipping  
+**Engine:** Unreal Engine 5.7.4  
+**ML Model:** Kolmogorov-Arnold Network (PyKAN B-Spline `[33, 8, 1]`)  
 
 ---
 
 ## 1. Quick Launch Instructions
 
-1. **Extract the ZIP Archive:**
-   Extract `SatelliteAvoidance_Windows_Shipping_x64.zip` to any local directory on your Windows computer (e.g. `C:\ICPS_App\` or `D:\SatelliteAvoidance\`).
-2. **Launch the Application:**
-   Double-click `SatelliteAvoidance.exe` located at the root of the extracted folder:
-   ```
-   [Extracted Folder]\SatelliteAvoidance.exe
-   ```
-   *(Alternatively, run `SatelliteAvoidance\Binaries\Win64\SatelliteAvoidance-Win64-Shipping.exe`)*
-3. **No Unreal Editor or Python Required:**
-   The application is fully compiled and packaged as a standalone native Windows 64-bit application. It runs directly on the target machine without Unreal Editor or Python installed.
+### Option A: One-Click Demonstration Launcher (Recommended)
+Double-click `Launch_ICPS_Demonstration.bat` (or run PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Launch_ICPS_Demonstration.ps1
+```
+This launcher automatically verifies the local KAN microservice on port 8000, starts the daemon if offline, waits for `/api/v1/health`, opens the application, and manages clean shutdown.
+
+### Option B: Direct Application Execution
+Double-click `SatelliteAvoidance.exe` at the root of `SatelliteAvoidance_Windows_Shipping_x64`:
+```cmd
+SatelliteAvoidance.exe
+```
+*(If the KAN microservice is offline, the application seamlessly launches in autonomous physics-only mode)*.
 
 ---
 
-## 2. Interactive Demonstration Controls
+## 2. Interactive Mission Control Dashboard
 
-The simulation automatically starts in Play mode at 5.0x real-time speed. You can interact with the simulation, timeline, and cameras using the following keyboard shortcuts:
-
-| Key | Action | Description |
-|:---|:---|:---|
-| **Spacebar** | **Play / Pause** | Toggle playback clock between active progression and paused state |
-| **R** | **Reset Simulation** | Reset clock to initial epoch ($T=0.0\text{ s}$) and re-initialize nominal trajectory |
-| **C** | **Cycle Camera View** | Smoothly blend across all 6 cinematic and scientific camera perspectives |
-| **Up Arrow** | **Increase Speed** | Accelerate playback through tiers: $1\times \rightarrow 2\times \rightarrow 5\times \rightarrow 10\times \rightarrow 25\times \rightarrow 50\times \rightarrow 100\times \rightarrow 200\times$ |
-| **Down Arrow** | **Decrease Speed** | Decelerate playback speed |
-| **Right Arrow** | **Step Forward** | Advance to next milestone demonstration step |
-| **Left Arrow** | **Step Backward** | Step backward to previous milestone demonstration step |
-| **Keys 1 – 8** | **Direct Milestone Jump** | Instantly jump to Step 1 through Step 8 with synchronized camera framing |
-| **Numpad 1 – 8** | **Direct Milestone Jump** | Numpad equivalents for direct milestone navigation |
-| **Alt + Enter** | **Toggle Fullscreen** | Toggle between windowed and borderless fullscreen mode |
-| **Alt + F4** | **Exit Application** | Close and cleanly shut down the application |
+The interface provides an interactive aerospace mission-control experience:
+- **Free Camera Navigation:** Left mouse drag (orbit), right mouse drag (pan), scroll wheel (smooth zoom), middle click (focus object), `F` key (frame object), `R` key (reset camera).
+- **Preset Cameras:** Keys `1` through `6` cycle between Overview, Satellite Chase, Debris Relative, Top-Down Orbital, Encounter Broadside, and Trajectory Plane.
+- **Timeline Progression:** 8-step clickable chevron timeline with play/pause (`Spacebar`), reset (`R`), step forward/back (`[` / `]`), and speed adjustments ($1.0\times$ to $200.0\times$).
+- **Mission Telemetry Cards (Right Panel):**
+  1. *Encounter Information:* Target pair, simulation time, and relative velocity.
+  2. *Nominal Prediction:* Nominal TCA ($769.63\text{ s}$), miss distance ($1,563.48\text{ m}$), Foster $P_c$ ($3.9575 \times 10^{-14}$).
+  3. *Planned Manoeuvre:* Delta-v ($3.00\text{ m/s}$ $-R$), burn epoch ($169.63\text{ s}$), burn marker.
+  4. *Post-Manoeuvre Prediction:* Predicted TCA ($903.03\text{ s}$), miss distance ($2,454.42\text{ m}$), $P_c$ ($1.2387 \times 10^{-22}$).
+  5. *KAN ML Risk Assessment:* Predicted $\log_{10}(P_c) = -21.7039$, Estimated $P_c = 1.9776 \times 10^{-22}$, inference latency ($42.2\text{ ms}$), status badge `[PREDICTED LOW]`.
+  6. *Dual-Model Verification Gate:* Physics reference (`Foster 2D/3D`), physics $\log_{10}(P_c) = -21.91$, concordance delta $\Delta \log_{10} = 0.20$, verdict badge `[CONCORDANT (LOW RISK)]`.
+  7. *Operational Status:* `PREDICTED SAFE` with clearance exceeding threshold.
 
 ---
 
-## 3. Eight-Step Demonstration Sequence
+## 3. Demonstration Documentation Index
 
-| Step | Epoch | Headline | Assigned Camera | Key Telemetry & Astrodynamic Event |
-|:---:|:---:|:---|:---|:---|
-| **1** | $T+0.0\text{ s}$ | Initialize Orbital Simulation | `Camera_Earth_Overview` | Nominal orbit monitoring; Instantaneous separation: $10,000\text{ m}$; Predicted nominal TCA miss: $1,563.48\text{ m}$ |
-| **2** | $T+60.0\text{ s}$ | Nominal Tracking & Observation | `Camera_Satellite_Detail` | Optical LOS sensor lock; Instantaneous separation: $9,379.6\text{ m}$ |
-| **3** | $T+120.0\text{ s}$ | Conjunction Detection | `Camera_Encounter_Overview` | Critical risk threshold exceeded ($P_c = 3.958 \times 10^{-14}$); Planned burn announced |
-| **4** | $T+150.0\text{ s}$ | Conjunction Geometry Assessment | `Camera_Conjunction_TCA` | Focus on closest-approach point; Predicted nominal miss: $1,563.48\text{ m}$ |
-| **5** | $T+169.6\text{ s}$ | Manoeuvre Readiness | `Camera_Satellite_Detail` | Satellite pre-burn posture; Instantaneous separation: $8,149.4\text{ m}$ |
-| **6** | $T+169.6\text{ s}$ | Manoeuvre Execution | `Camera_Manoeuvre_Burn` | Radial inward burn applied ($\Delta v = 3.00\text{ m/s}$, $-R$); Modified orbit initiated |
-| **7** | $T+300.0\text{ s}$ | Post-Manoeuvre Divergence | `Camera_Encounter_Overview` | Trajectory divergence in progress; Instantaneous separation: $6,648.5\text{ m}$ |
-| **8** | $T+903.0\text{ s}$ | Safe Clearance Achieved | `Camera_Earth_Overview` | Post-manoeuvre TCA achieved; Instantaneous separation: $4,525.72\text{ m}$; Post-burn miss distance: $2,454.42\text{ m}$ (Clearance resolved $> 2,000\text{ m}$ threshold) |
+- **[Demonstration Operator Guide](Demonstration_Operator_Guide.md):** Step-by-step presentation script, milestone descriptions, and fallback demonstration walkthrough.
+- **[Backend Startup Instructions](Backend_Startup_Instructions.md):** Manual daemon launch commands, diagnostic endpoints, and REST schema specifications.
+- **[Runtime Verification Report](Runtime_Verification_Report.md):** Packaging characteristics, binary sizes, test suite execution logs, and dual-model telemetry tables.
 
 ---
 
-## 4. Telemetry HUD Display Guide
+## 4. System Requirements
 
-The telemetry panel (top-left) displays synchronized flight data derived from the authoritative scientific payload:
-- **Simulation Time:** Elapsed scenario seconds from initial epoch.
-- **Encounter Pair:** Protected Satellite (`CARTOSAT-3` / `ProtectedSatellite_Payload01`) vs. Tracked Debris (`DEBRIS_PIECE_99` / `SecondaryDebris_Object99`).
-- **Nominal TCA & Miss Distance:** Nominal time of closest approach ($769.63\text{ s}$) and nominal miss distance ($1,563.48\text{ m}$).
-- **Instantaneous Separation vs. Predicted TCA Miss Distance:**
-  *Note:* Instantaneous separation is the current distance between satellite and debris. Predicted TCA miss distance is the minimum clearance predicted at the conjunction epoch ($T=903.03\text{ s}$). At Step 8, instantaneous separation is $\approx 4,525.72\text{ m}$, while the post-manoeuvre TCA miss distance is $2,454.42\text{ m}$.
-- **Collision Probability ($P_c$):** Calculated via Foster (1992) 2D probability solver. Reduced from $3.958 \times 10^{-14}$ (nominal) to $1.239 \times 10^{-22}$ (post-manoeuvre).
-- **Safety Status:** Clearly displays risk status transition from *CRITICAL RISK* to *AVOIDANCE RESOLVED*.
-
----
-
-## 5. System Requirements
-
-### Minimum Requirements:
-- **Operating System:** Windows 10 64-bit (Version 1909 or higher) or Windows 11 64-bit
-- **Processor:** Intel Core i5 / AMD Ryzen 5 (4 physical cores or higher)
-- **Memory:** 8 GB RAM
+- **Operating System:** Windows 10 / Windows 11 64-bit
 - **Graphics:** DirectX 12 compatible GPU (NVIDIA GTX 1060 / AMD Radeon RX 580 / Intel Iris Xe / Arc or newer)
-- **DirectX:** Version 12 (DirectX 12 feature level 11_0 or 12_0)
-- **Storage:** 1.0 GB available disk space (Uncompressed package size: $\approx 468\text{ MB}$)
-
-### Runtime Dependencies:
-- **Microsoft Visual C++ 2015–2022/2026 Redistributable (x64)**
-  If not already installed on the target computer, download and install the official Microsoft VC++ Redistributable:
-  `https://aka.ms/vs/17/release/vc_redist.x64.exe`
-- **DirectX 12 Runtime:** Standard with Windows 10 / Windows 11 updates.
-- **Bundled Libraries:** `D3D12Core.dll`, `DirectML.dll`, `tbb12.dll`, and `tbbmalloc.dll` are included within the packaged directory.
-
----
-
-## 6. Known Characteristics & Notes
-
-- **Initial Load Time:** The first launch initializes the D3D12 shader pipeline and pre-caches GPU assets; subsequent launches start faster.
-- **Data Integrity:** Simulation trajectory and conjunction values are loaded directly from `SatelliteAvoidance/Content/Data/unreal_simulation_payload.json`.
-- **Standalone Execution:** No internet connection, Python environment, or development SDK is required.
+- **DirectX:** Version 12
+- **Memory:** 8 GB RAM
+- **Storage:** ~500 MB uncompressed (ZIP distribution: 347.25 MB)
