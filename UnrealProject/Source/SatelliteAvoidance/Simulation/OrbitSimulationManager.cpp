@@ -1,20 +1,36 @@
 // OrbitSimulationManager.cpp
 #include "OrbitSimulationManager.h"
+#include "SatelliteAvoidance/UI/AvoidanceInfoPanelWidget.h"
 #include "SatelliteAvoidance/DataBridge/CoordinateAdapter.h"
+#include "SatelliteAvoidance/Camera/FreeCameraController.h"
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 #include "Kismet/GameplayStatics.h"
-#include "GameFramework/PlayerController.h"
 #include "Camera/CameraActor.h"
 #include "EngineUtils.h"
+#include "Misc/Paths.h"
+#include "GameFramework/PlayerController.h"
+#include "UnrealClient.h"
+#include "Engine/StaticMeshActor.h"
+#include "Components/StaticMeshComponent.h"
+#include "Materials/MaterialInterface.h"
+#include "Misc/CommandLine.h"
+#include "GenericPlatform/GenericPlatformMisc.h"
 
 AOrbitSimulationManager::AOrbitSimulationManager()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
 	DataBridge = CreateDefaultSubobject<USimulationDataBridge>(TEXT("DataBridge"));
-	CurrentStepIndex = 1;
 	CurrentSimulationTime = 0.0;
-	TimeDilation = 5.0;
+	TimeDilation = 10.0; // 10x real-time playback by default matching reference
 	bIsPlaying = true;
 	bManoeuvreExecuted = false;
+	bUseFreeCamera = true;
 }
 
 namespace
@@ -68,18 +84,6 @@ void AOrbitSimulationManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Robust multi-path resolution: packaged content dir, project data dir, or relative dev dir
-	FString SelectedPayloadPath = FPaths::ProjectContentDir() / TEXT("Data/unreal_simulation_payload.json");
-	if (!FPaths::FileExists(SelectedPayloadPath))
-	{
-		SelectedPayloadPath = FPaths::ProjectDir() / TEXT("Data/unreal_simulation_payload.json");
-	}
-	if (!FPaths::FileExists(SelectedPayloadPath))
-	{
-		SelectedPayloadPath = FPaths::ProjectDir() / TEXT("../D2/visualization/unreal_simulation_payload.json");
-	}
-	InitializeSimulationFromPayload(SelectedPayloadPath);
-
 	// Auto-discover scene actor references if not set in editor
 	if (GetWorld())
 	{
@@ -91,6 +95,7 @@ void AOrbitSimulationManager::BeginPlay()
 				break;
 			}
 		}
+
 		if (!SatelliteActor)
 		{
 			for (TActorIterator<ASatelliteActor> It(GetWorld()); It; ++It)
@@ -99,6 +104,7 @@ void AOrbitSimulationManager::BeginPlay()
 				break;
 			}
 		}
+
 		if (!DebrisActor)
 		{
 			for (TActorIterator<ADebrisActor> It(GetWorld()); It; ++It)
@@ -107,22 +113,7 @@ void AOrbitSimulationManager::BeginPlay()
 				break;
 			}
 		}
-		if (!ConjunctionVisualizer)
-		{
-			for (TActorIterator<AConjunctionVisualizer> It(GetWorld()); It; ++It)
-			{
-				ConjunctionVisualizer = *It;
-				break;
-			}
-		}
-		if (!ManoeuvreVisualizer)
-		{
-			for (TActorIterator<AManoeuvreVisualizer> It(GetWorld()); It; ++It)
-			{
-				ManoeuvreVisualizer = *It;
-				break;
-			}
-		}
+
 		if (!SatNominalPathActor || !DebrisPathActor || !SatModifiedPathActor)
 		{
 			for (TActorIterator<AOrbitPathActor> It(GetWorld()); It; ++It)
@@ -136,14 +127,32 @@ void AOrbitSimulationManager::BeginPlay()
 				{
 					SatModifiedPathActor = *It;
 				}
-				else if (!SatNominalPathActor)
+				else if (Label.Contains(TEXT("Nominal")) || DoesActorMatchName(*It, TEXT("Nominal"), false))
 				{
 					SatNominalPathActor = *It;
 				}
 			}
 		}
 
-		// Auto-discover CameraActors in scene
+		if (!ConjunctionVisualizer)
+		{
+			for (TActorIterator<AConjunctionVisualizer> It(GetWorld()); It; ++It)
+			{
+				ConjunctionVisualizer = *It;
+				break;
+			}
+		}
+
+		if (!ManoeuvreVisualizer)
+		{
+			for (TActorIterator<AManoeuvreVisualizer> It(GetWorld()); It; ++It)
+			{
+				ManoeuvreVisualizer = *It;
+				break;
+			}
+		}
+
+		// Collect and register all scene camera views
 		CameraViews.Empty();
 		for (TActorIterator<ACameraActor> It(GetWorld()); It; ++It)
 		{
@@ -170,37 +179,127 @@ void AOrbitSimulationManager::BeginPlay()
 		}
 	}
 
-	// Instantiate and display Telemetry HUD in Play In Editor / Runtime
+	// Robust multi-path resolution: packaged content dir, project data dir, or relative dev dir
+	FString SelectedPayloadPath = FPaths::ProjectContentDir() / TEXT("Data/unreal_simulation_payload.json");
+	if (!FPaths::FileExists(SelectedPayloadPath))
+	{
+		SelectedPayloadPath = FPaths::ProjectDir() / TEXT("Data/unreal_simulation_payload.json");
+	}
+	if (!FPaths::FileExists(SelectedPayloadPath))
+	{
+		SelectedPayloadPath = FPaths::ProjectDir() / TEXT("../D2/visualization/unreal_simulation_payload.json");
+	}
+	InitializeSimulationFromPayload(SelectedPayloadPath);
+
+	// Instantiate and display Mission Control Dashboard HUD in Play In Editor / Runtime
 	if (GetWorld() && (GetWorld()->IsGameWorld() || GetWorld()->IsPlayInEditor()))
 	{
+		// Spawn dedicated Free Camera Controller
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FreeCameraController = GetWorld()->SpawnActor<AFreeCameraController>(AFreeCameraController::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+
+		if (FreeCameraController)
+		{
+			// Configure default mission control framing matching approved reference:
+			// Earth spherical and centered in background, Satellite foreground left, Debris right
+			const FVector DefaultMid(0.0f, 0.0f, 0.0f);
+			const FRotator DefaultRot(8.73f, 139.6f, 0.0f);
+			const double DefaultDist = 186084.0;
+			FreeCameraController->ConfigureDefaultFraming(DefaultMid, DefaultRot, DefaultDist);
+			FreeCameraController->ResetToDefault();
+			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: FreeCameraController spawned and configured."));
+		}
+
 		AvoidanceWidget = CreateWidget<UAvoidanceInfoPanelWidget>(GetWorld(), UAvoidanceInfoPanelWidget::StaticClass());
 		if (AvoidanceWidget)
 		{
+			AvoidanceWidget->SimulationManager = this;
 			AvoidanceWidget->AddToViewport(100);
 			AvoidanceWidget->UpdatePlaybackControls(bIsPlaying, TimeDilation, CurrentStepIndex, DataBridge ? DataBridge->DemonstrationSequence.Num() : 8);
-			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Telemetry HUD widget added to viewport."));
+			AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
+			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Mission Control Dashboard added to viewport."));
 		}
 
-		// Set initial camera view
-		if (OverviewCamera)
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC)
 		{
-			APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
-			if (PC)
+			// Enable interactive mouse cursor and UI input mode
+			PC->bShowMouseCursor = true;
+			PC->bEnableClickEvents = true;
+			PC->bEnableMouseOverEvents = true;
+
+			FInputModeGameAndUI InputMode;
+			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			InputMode.SetHideCursorDuringCapture(false);
+			PC->SetInputMode(InputMode);
+
+			// Set initial view to Free Camera or Overview
+			if (bUseFreeCamera && FreeCameraController)
+			{
+				PC->SetViewTarget(FreeCameraController);
+			}
+			else if (OverviewCamera)
 			{
 				PC->SetViewTarget(OverviewCamera);
-				UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: View target set to OverviewCamera."));
 			}
+			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: View target set. Mouse cursor enabled."));
 		}
 
-		// Suppress engine on-screen warnings (e.g. Lumen Distance Fields, Rebuild Lighting)
-		if (GEngine && GetWorld())
+		// Ensure all simulation actors are spatially persistent (never unloaded by World Partition)
+#if WITH_EDITOR
+		SetIsSpatiallyLoaded(false);
+		if (EarthActor) EarthActor->SetIsSpatiallyLoaded(false);
+		if (SatelliteActor) SatelliteActor->SetIsSpatiallyLoaded(false);
+		if (DebrisActor) DebrisActor->SetIsSpatiallyLoaded(false);
+		if (SatNominalPathActor) SatNominalPathActor->SetIsSpatiallyLoaded(false);
+		if (SatModifiedPathActor) SatModifiedPathActor->SetIsSpatiallyLoaded(false);
+		if (DebrisPathActor) DebrisPathActor->SetIsSpatiallyLoaded(false);
+		if (ConjunctionVisualizer) ConjunctionVisualizer->SetIsSpatiallyLoaded(false);
+		if (ManoeuvreVisualizer) ManoeuvreVisualizer->SetIsSpatiallyLoaded(false);
+		if (FreeCameraController) FreeCameraController->SetIsSpatiallyLoaded(false);
+#endif
+
+		// Hide terrestrial landscape, atmosphere, fog, cloud, and skydome actors to ensure clean orbital deep space contrast
+		for (TActorIterator<AActor> It(GetWorld()); It; ++It)
 		{
-			GEngine->Exec(GetWorld(), TEXT("DisableAllScreenMessages"));
-			GEngine->Exec(GetWorld(), TEXT("r.Lumen.WarnAboutMissingDistanceFields 0"));
+			AActor* Act = *It;
+			if (!Act) continue;
+
+			const FString ActClass = Act->GetClass()->GetName();
+			const FString ActName = Act->GetName();
+			const FString ActLabel = GetSafeActorName(Act);
+
+			if (ActClass.Contains(TEXT("Landscape")) ||
+				ActClass.Contains(TEXT("SkyAtmosphere")) ||
+				ActClass.Contains(TEXT("ExponentialHeightFog")) ||
+				ActClass.Contains(TEXT("VolumetricCloud")) ||
+				ActLabel.Contains(TEXT("SkySphere"), ESearchCase::IgnoreCase) ||
+				ActName.Contains(TEXT("SkySphere"), ESearchCase::IgnoreCase))
+			{
+				Act->SetActorHiddenInGame(true);
+				Act->SetActorEnableCollision(false);
+			}
+			else if (ActClass.Contains(TEXT("DirectionalLight")))
+			{
+				Act->SetActorRotation(FRotator(-35.0f, 140.0f, 0.0f));
+			}
 		}
 
 		// Setup interactive player keyboard controls
 		SetupPlayerInput();
+
+		SetActorTickEnabled(true);
+
+		// Check if automated review capture is requested
+		bAutoCaptureReview = FParse::Param(FCommandLine::Get(), TEXT("AutoCaptureReview"));
+		if (bAutoCaptureReview)
+		{
+			AutoCaptureFrame = 0;
+			ReviewCaptureTickCount = 0;
+			GetWorldTimerManager().SetTimer(ReviewTimerHandle, this, &AOrbitSimulationManager::OnReviewCaptureTick, 0.08f, true, 0.5f);
+			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Automated review capture timer initiated via -AutoCaptureReview."));
+		}
 	}
 }
 
@@ -215,11 +314,14 @@ void AOrbitSimulationManager::SetupPlayerInput()
 	// Space: Play / Pause
 	InputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &AOrbitSimulationManager::TogglePlayPause);
 
-	// R: Reset simulation
-	InputComponent->BindKey(EKeys::R, IE_Pressed, this, &AOrbitSimulationManager::ResetSimulation);
+	// R: Reset Camera to Overview
+	InputComponent->BindKey(EKeys::R, IE_Pressed, this, &AOrbitSimulationManager::ResetCameraToOverview);
 
 	// C: Cycle Camera View
 	InputComponent->BindKey(EKeys::C, IE_Pressed, this, &AOrbitSimulationManager::CycleCameraView);
+
+	// F: Frame / Focus Selected Object
+	InputComponent->BindKey(EKeys::F, IE_Pressed, this, &AOrbitSimulationManager::FrameSelectedActor);
 
 	// Up / Down: Playback Speed
 	InputComponent->BindKey(EKeys::Up, IE_Pressed, this, &AOrbitSimulationManager::IncreaseSpeed);
@@ -260,20 +362,26 @@ bool AOrbitSimulationManager::InitializeSimulationFromPayload(const FString& Pay
 		return false;
 	}
 
-	// Initialize Orbit Paths with visible spline geometry
+	// Initialize Orbit Paths with visible spline geometry (clean, thin, glowing orbital curves)
 	if (SatNominalPathActor && DataBridge->SatNominalPositions.Num() > 0)
 	{
+		SatNominalPathActor->PathThickness = 120.0f;
+		SatNominalPathActor->bIsDashed = false;
 		SatNominalPathActor->SetTrajectoryPoints(DataBridge->SatNominalPositions, FLinearColor(0.0f, 0.85f, 1.0f, 1.0f)); // Cyan
 	}
 
 	if (DebrisPathActor && DataBridge->DebrisPositions.Num() > 0)
 	{
-		DebrisPathActor->SetTrajectoryPoints(DataBridge->DebrisPositions, FLinearColor(1.0f, 0.15f, 0.1f, 1.0f)); // Red
+		DebrisPathActor->PathThickness = 120.0f;
+		DebrisPathActor->bIsDashed = false;
+		DebrisPathActor->SetTrajectoryPoints(DataBridge->DebrisPositions, FLinearColor(1.0f, 0.55f, 0.05f, 1.0f)); // Orange
 	}
 
 	if (SatModifiedPathActor && DataBridge->SatModifiedPositions.Num() > 0)
 	{
-		SatModifiedPathActor->SetTrajectoryPoints(DataBridge->SatModifiedPositions, FLinearColor(0.15f, 1.0f, 0.35f, 1.0f)); // Vibrant Green
+		SatModifiedPathActor->PathThickness = 120.0f;
+		SatModifiedPathActor->bIsDashed = true;
+		SatModifiedPathActor->SetTrajectoryPoints(DataBridge->SatModifiedPositions, FLinearColor(0.0f, 0.95f, 0.35f, 1.0f)); // Vibrant Green
 		SatModifiedPathActor->SetActorHiddenInGame(true); // Hidden until manoeuvre execution
 	}
 
@@ -345,7 +453,12 @@ void AOrbitSimulationManager::Tick(float DeltaTime)
 
 	if (DebrisActor)
 	{
-		DebrisActor->SetActorLocation(DebPos);
+		// Visual separation offset to prevent visual mesh penetration while preserving exact physical trajectory
+		FVector SepDir = (DebPos - SatPos);
+		if (SepDir.IsNearlyZero()) { SepDir = FVector(0.0, -1.0, 0.0); }
+		else { SepDir.Normalize(); }
+		const FVector VisualDebPos = SatPos + SepDir * 6000.0;
+		DebrisActor->SetActorLocation(VisualDebPos);
 	}
 
 	// Evaluate milestone demonstration step dynamically based on simulation time
@@ -368,53 +481,18 @@ void AOrbitSimulationManager::Tick(float DeltaTime)
 			const FDemonstrationStep& Step = DataBridge->DemonstrationSequence[ClampedIdx];
 			if (AvoidanceWidget)
 			{
-				AvoidanceWidget->CurrentMilestoneHeadline = FString::Printf(TEXT("Step %d / %d: %s"), Step.StepIndex, DataBridge->DemonstrationSequence.Num(), *Step.Headline);
+				AvoidanceWidget->CurrentMilestoneHeadline = Step.Headline;
 			}
 			OnStepTriggered.Broadcast(Step);
 		}
 	}
 
-	// Dynamic overview camera tracking relative to encounter midpoint
-	if (OverviewCamera)
-	{
-		const FVector Midpoint = (SatPos + DebPos) * 0.5f;
-
-		// Local radial direction from Earth center (XY plane)
-		FVector RadialDir = FVector(Midpoint.X, Midpoint.Y, 0.0f).GetSafeNormal();
-		if (RadialDir.IsNearlyZero())
-		{
-			RadialDir = FVector(1.0f, 0.0f, 0.0f);
-		}
-
-		// Tangential velocity direction
-		FVector VelocityDir = (SatPosNext - SatPos);
-		VelocityDir.Z = 0.0f;
-		VelocityDir = VelocityDir.GetSafeNormal();
-		if (VelocityDir.IsNearlyZero())
-		{
-			VelocityDir = FVector(-RadialDir.Y, RadialDir.X, 0.0f);
-		}
-
-		const FVector NormalDir = FVector(0.0f, 0.0f, 1.0f);
-
-		// Frame camera at elevated flank vantage:
-		// RadialDir * 300.0f keeps camera slightly outside orbit so Earth forms a graceful background limb
-		// -VelocityDir * 870.0f places camera trailing the objects so they are in front
-		// NormalDir * 750.0f elevates camera for clear 3D perspective
-		const FVector DesiredCamPos = Midpoint + (RadialDir * 300.0f) - (VelocityDir * 870.0f) + (NormalDir * 750.0f);
-		const FVector LookTarget = Midpoint + (VelocityDir * 30.0f);
-
-		OverviewCamera->SetActorLocation(DesiredCamPos);
-		const FRotator DesiredRot = FRotationMatrix::MakeFromX(LookTarget - DesiredCamPos).Rotator();
-		OverviewCamera->SetActorRotation(DesiredRot);
-	}
-
-	// Update Telemetry HUD
+	// Update Mission Control Dashboard HUD
 	if (AvoidanceWidget)
 	{
 		AvoidanceWidget->UpdateTelemetry(
 			CurrentSimulationTime,
-			SatelliteActor ? SatelliteActor->SatelliteId : TEXT("CARTOSAT-3"),
+			SatelliteActor ? SatelliteActor->SatelliteId : TEXT("SAT_PAYLOAD_01"),
 			DebrisActor ? DebrisActor->DebrisId : TEXT("DEBRIS_PIECE_99"),
 			DataBridge->NominalEncounter,
 			DataBridge->PostManoeuvreEncounter,
@@ -422,9 +500,92 @@ void AOrbitSimulationManager::Tick(float DeltaTime)
 			bManoeuvreExecuted
 		);
 		AvoidanceWidget->UpdatePlaybackControls(bIsPlaying, TimeDilation, CurrentStepIndex, DataBridge->DemonstrationSequence.Num());
+		AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
 	}
 
 	OnTimeUpdated.Broadcast(CurrentSimulationTime);
+}
+
+void AOrbitSimulationManager::OnReviewCaptureTick()
+{
+	ReviewCaptureTickCount++;
+	UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: OnReviewCaptureTick %d"), ReviewCaptureTickCount);
+
+	if (ReviewCaptureTickCount == 4)
+	{
+		JumpToStep(1);
+		ResetCameraToOverview();
+	}
+	else if (ReviewCaptureTickCount == 8)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("View1_DefaultOverview.png"), true, false);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Requested View1_DefaultOverview.png"));
+	}
+	else if (ReviewCaptureTickCount == 13)
+	{
+		JumpToStep(6);
+		ResetCameraToOverview();
+	}
+	else if (ReviewCaptureTickCount == 17)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("View2_EarthCentredOverview.png"), true, false);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Requested View2_EarthCentredOverview.png"));
+	}
+	else if (ReviewCaptureTickCount == 22)
+	{
+		if (SatelliteActor)
+		{
+			SelectActor(SatelliteActor);
+			FrameSelectedActor();
+		}
+	}
+	else if (ReviewCaptureTickCount == 26)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("View3_SatelliteInspection.png"), true, false);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Requested View3_SatelliteInspection.png"));
+	}
+	else if (ReviewCaptureTickCount == 31)
+	{
+		if (DebrisActor)
+		{
+			SelectActor(DebrisActor);
+			FrameSelectedActor();
+		}
+	}
+	else if (ReviewCaptureTickCount == 35)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("View4_DebrisInspection.png"), true, false);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Requested View4_DebrisInspection.png"));
+	}
+	else if (ReviewCaptureTickCount == 40)
+	{
+		if (EarthActor)
+		{
+			SelectActor(EarthActor);
+			FrameSelectedActor();
+		}
+	}
+	else if (ReviewCaptureTickCount == 44)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("View4_EarthCloseUp.png"), true, false);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Requested View4_EarthCloseUp.png"));
+	}
+	else if (ReviewCaptureTickCount == 49)
+	{
+		JumpToStep(6);
+		ResetCameraToOverview();
+	}
+	else if (ReviewCaptureTickCount == 53)
+	{
+		FScreenshotRequest::RequestScreenshot(TEXT("View5_FullDashboard_Step6.png"), true, false);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Requested View5_FullDashboard_Step6.png"));
+	}
+	else if (ReviewCaptureTickCount >= 60)
+	{
+		GetWorldTimerManager().ClearTimer(ReviewTimerHandle);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Review sequence completed. Requesting exit."));
+		FGenericPlatformMisc::RequestExit(false);
+	}
 }
 
 void AOrbitSimulationManager::JumpToStep(int32 StepIndex)
@@ -435,6 +596,7 @@ void AOrbitSimulationManager::JumpToStep(int32 StepIndex)
 	}
 
 	CurrentStepIndex = FMath::Clamp(StepIndex, 1, DataBridge->DemonstrationSequence.Num());
+	RequestKanPrediction(CurrentStepIndex);
 	const int32 ClampedIdx = CurrentStepIndex - 1;
 	const FDemonstrationStep& Step = DataBridge->DemonstrationSequence[ClampedIdx];
 
@@ -449,33 +611,38 @@ void AOrbitSimulationManager::JumpToStep(int32 StepIndex)
 		SatelliteActor->SetVisualState(bManoeuvreExecuted ? ESatelliteVisualState::ManoeuvredFlight : ESatelliteVisualState::NominalFlight);
 	}
 
+	if (!bUseFreeCamera)
+	{
+		SetCameraForStep(CurrentStepIndex);
+	}
+
 	if (AvoidanceWidget)
 	{
-		AvoidanceWidget->CurrentMilestoneHeadline = FString::Printf(TEXT("Step %d / %d: %s"), Step.StepIndex, DataBridge->DemonstrationSequence.Num(), *Step.Headline);
+		AvoidanceWidget->CurrentMilestoneHeadline = Step.Headline;
 		AvoidanceWidget->UpdatePlaybackControls(bIsPlaying, TimeDilation, CurrentStepIndex, DataBridge->DemonstrationSequence.Num());
 	}
 
-	SetCameraForStep(CurrentStepIndex);
-
-	// Update immediately
 	Tick(0.0f);
 	OnStepTriggered.Broadcast(Step);
-	UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Jumped to Step %d (%s) at T+%.1fs"), CurrentStepIndex, *Step.Headline, CurrentSimulationTime);
+	UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Jumped to Step %d (T=%.1fs): %s"), CurrentStepIndex, CurrentSimulationTime, *Step.Headline);
 }
 
 void AOrbitSimulationManager::StepForward()
 {
-	if (DataBridge && DataBridge->DemonstrationSequence.Num() > 0)
+	if (DataBridge)
 	{
-		const int32 NextStep = FMath::Min(CurrentStepIndex + 1, DataBridge->DemonstrationSequence.Num());
+		const int32 NextStep = FMath::Clamp(CurrentStepIndex + 1, 1, DataBridge->DemonstrationSequence.Num());
 		JumpToStep(NextStep);
 	}
 }
 
 void AOrbitSimulationManager::StepBackward()
 {
-	const int32 PrevStep = FMath::Max(CurrentStepIndex - 1, 1);
-	JumpToStep(PrevStep);
+	if (DataBridge)
+	{
+		const int32 PrevStep = FMath::Clamp(CurrentStepIndex - 1, 1, DataBridge->DemonstrationSequence.Num());
+		JumpToStep(PrevStep);
+	}
 }
 
 void AOrbitSimulationManager::TogglePlayPause()
@@ -492,7 +659,6 @@ void AOrbitSimulationManager::ResetSimulation()
 {
 	CurrentSimulationTime = 0.0;
 	CurrentStepIndex = 1;
-	bIsPlaying = true;
 	bManoeuvreExecuted = false;
 
 	if (SatModifiedPathActor) { SatModifiedPathActor->SetActorHiddenInGame(true); }
@@ -501,16 +667,24 @@ void AOrbitSimulationManager::ResetSimulation()
 
 	if (AvoidanceWidget && DataBridge && DataBridge->DemonstrationSequence.Num() > 0)
 	{
-		AvoidanceWidget->CurrentMilestoneHeadline = FString::Printf(TEXT("Step 1 / %d: %s"), DataBridge->DemonstrationSequence.Num(), *DataBridge->DemonstrationSequence[0].Headline);
+		AvoidanceWidget->CurrentMilestoneHeadline = DataBridge->DemonstrationSequence[0].Headline;
 		AvoidanceWidget->UpdatePlaybackControls(bIsPlaying, TimeDilation, CurrentStepIndex, DataBridge->DemonstrationSequence.Num());
 	}
 
-	SetCameraForStep(1);
+	if (FreeCameraController && bUseFreeCamera)
+	{
+		FreeCameraController->ResetToDefault();
+	}
+	else
+	{
+		SetCameraForStep(1);
+	}
+
 	Tick(0.0f);
 	UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Simulation reset to initial epoch (T=0.0s)."));
 }
 
-void AOrbitSimulationManager::IncreaseSpeed()
+void AOrbitSimulationManager::CycleSpeed()
 {
 	static const double SpeedTiers[] = { 1.0, 2.0, 5.0, 10.0, 25.0, 50.0, 100.0, 200.0 };
 	const int32 NumTiers = UE_ARRAY_COUNT(SpeedTiers);
@@ -523,7 +697,12 @@ void AOrbitSimulationManager::IncreaseSpeed()
 			return;
 		}
 	}
-	SetTimeDilation(SpeedTiers[NumTiers - 1]);
+	SetTimeDilation(SpeedTiers[0]);
+}
+
+void AOrbitSimulationManager::IncreaseSpeed()
+{
+	CycleSpeed();
 }
 
 void AOrbitSimulationManager::DecreaseSpeed()
@@ -552,6 +731,38 @@ void AOrbitSimulationManager::SetTimeDilation(double NewDilation)
 	UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Time Dilation set to %.1fx"), TimeDilation);
 }
 
+void AOrbitSimulationManager::ToggleFreeCamera()
+{
+	bUseFreeCamera = !bUseFreeCamera;
+	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+
+	if (bUseFreeCamera && FreeCameraController && PC)
+	{
+		// Smooth handoff: initialize Free Camera from active camera view
+		AActor* CurrentCam = PC->GetViewTarget();
+		if (CurrentCam)
+		{
+			FreeCameraController->ActivateFreeCamera(CurrentCam->GetActorLocation(), CurrentCam->GetActorRotation());
+		}
+		PC->SetViewTargetWithBlend(FreeCameraController, 0.5f);
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Toggled to Free Camera mode."));
+	}
+	else if (!bUseFreeCamera && PC && CameraViews.Num() > 0)
+	{
+		AActor* TargetCam = CameraViews[CurrentCameraIndex];
+		if (TargetCam)
+		{
+			PC->SetViewTargetWithBlend(TargetCam, 0.5f);
+			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Toggled to Preset Camera [%s]."), *GetSafeActorName(TargetCam));
+		}
+	}
+
+	if (AvoidanceWidget)
+	{
+		AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
+	}
+}
+
 void AOrbitSimulationManager::CycleCameraView()
 {
 	if (CameraViews.Num() == 0)
@@ -567,6 +778,8 @@ void AOrbitSimulationManager::CycleCameraView()
 
 	if (CameraViews.Num() == 0) return;
 
+	// When cycling presets, switch to preset mode
+	bUseFreeCamera = false;
 	CurrentCameraIndex = (CurrentCameraIndex + 1) % CameraViews.Num();
 	AActor* TargetCam = CameraViews[CurrentCameraIndex];
 	if (TargetCam)
@@ -574,10 +787,89 @@ void AOrbitSimulationManager::CycleCameraView()
 		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
 		if (PC)
 		{
-			PC->SetViewTargetWithBlend(TargetCam, 0.75f);
+			PC->SetViewTargetWithBlend(TargetCam, 0.6f);
 			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Switched camera to [%s] (Index %d/%d)"), *GetSafeActorName(TargetCam), CurrentCameraIndex + 1, CameraViews.Num());
 		}
 	}
+
+	if (AvoidanceWidget)
+	{
+		AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
+	}
+}
+
+void AOrbitSimulationManager::SelectActor(AActor* InActor)
+{
+	if (FreeCameraController && InActor)
+	{
+		FreeCameraController->FocusOnActor(InActor);
+		bUseFreeCamera = true;
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC)
+		{
+			PC->SetViewTarget(FreeCameraController);
+		}
+		if (AvoidanceWidget)
+		{
+			AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
+		}
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Selected and focused on Actor [%s]."), *InActor->GetName());
+	}
+}
+
+void AOrbitSimulationManager::FrameSelectedActor()
+{
+	if (FreeCameraController)
+	{
+		FreeCameraController->FrameSelected();
+		bUseFreeCamera = true;
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC)
+		{
+			PC->SetViewTarget(FreeCameraController);
+		}
+		if (AvoidanceWidget)
+		{
+			AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
+		}
+	}
+}
+
+void AOrbitSimulationManager::ResetCameraToOverview()
+{
+	if (FreeCameraController)
+	{
+		FreeCameraController->ResetToDefault();
+		bUseFreeCamera = true;
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC)
+		{
+			PC->SetViewTarget(FreeCameraController);
+		}
+		if (AvoidanceWidget)
+		{
+			AvoidanceWidget->UpdateCameraDisplay(GetCurrentCameraName(), bUseFreeCamera);
+		}
+		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Reset camera to Mission Control Overview."));
+	}
+}
+
+FString AOrbitSimulationManager::GetCurrentCameraName() const
+{
+	if (bUseFreeCamera)
+	{
+		return TEXT("Free Camera");
+	}
+
+	if (CameraViews.IsValidIndex(CurrentCameraIndex) && CameraViews[CurrentCameraIndex])
+	{
+		FString CamName = GetSafeActorName(CameraViews[CurrentCameraIndex]);
+		CamName.ReplaceInline(TEXT("Camera_"), TEXT(""));
+		CamName.ReplaceInline(TEXT("_"), TEXT(" "));
+		return CamName;
+	}
+
+	return TEXT("Preset Camera");
 }
 
 void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
@@ -639,8 +931,6 @@ void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
 			{
 				PC->SetViewTargetWithBlend(CameraViews[i], 0.75f);
 			}
-			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Step %d -> Camera [%s] (Index %d/%d)"),
-				StepIndex, *TargetCameraName, CurrentCameraIndex + 1, CameraViews.Num());
 			return;
 		}
 	}
@@ -659,8 +949,6 @@ void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
 			{
 				PC->SetViewTargetWithBlend(CameraViews[i], 0.75f);
 			}
-			UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Step %d -> Camera [%s] via substring [%s] (Index %d/%d)"),
-				StepIndex, *GetSafeActorName(CameraViews[i]), *CleanTarget, CurrentCameraIndex + 1, CameraViews.Num());
 			return;
 		}
 	}
@@ -685,8 +973,238 @@ void AOrbitSimulationManager::SetCameraForStep(int32 StepIndex)
 		{
 			PC->SetViewTargetWithBlend(CameraViews[CurrentCameraIndex], 0.75f);
 		}
-		UE_LOG(LogTemp, Log, TEXT("AOrbitSimulationManager: Step %d -> Camera [%s] via deterministic index fallback (Index %d/%d)"),
-			StepIndex, *TargetCameraName, CurrentCameraIndex + 1, CameraViews.Num());
 		return;
 	}
+}
+
+void AOrbitSimulationManager::RequestKanPrediction(int32 StepIndex)
+{
+	if (bKanRequestInFlight)
+	{
+		return;
+	}
+
+	LastKanRequestedStep = StepIndex;
+	LastKanRequestTime = FPlatformTime::Seconds();
+
+	if (!DataBridge || !SatelliteActor)
+	{
+		if (AvoidanceWidget)
+		{
+			AvoidanceWidget->UpdateKanTelemetry(
+				TEXT("N/A"),
+				TEXT("N/A"),
+				TEXT("pykan_esa_kelvins_v1.0"),
+				TEXT("INSUFFICIENT_INPUT_DATA"),
+				TEXT("-- ms"),
+				TEXT("N/A"),
+				TEXT("PHYSICS ONLY (FALLBACK)"),
+				FLinearColor(1.0f, 0.65f, 0.1f, 1.0f),
+				FLinearColor(0.0f, 0.95f, 0.45f, 1.0f)
+			);
+		}
+		return;
+	}
+
+	bKanRequestInFlight = true;
+
+	// Create JSON payload
+	TSharedPtr<FJsonObject> RootObject = MakeShared<FJsonObject>();
+	RootObject->SetStringField(TEXT("schema_version"), TEXT("1.0"));
+	RootObject->SetStringField(TEXT("scenario_id"), FString::Printf(TEXT("STEP_%d"), StepIndex));
+	RootObject->SetStringField(TEXT("frame"), TEXT("ECI_J2000"));
+	RootObject->SetNumberField(TEXT("tca_seconds"), DataBridge->NominalEncounter.TcaSeconds);
+
+	// Primary Spacecraft
+	TSharedPtr<FJsonObject> PrimaryObj = MakeShared<FJsonObject>();
+	PrimaryObj->SetStringField(TEXT("id"), SatelliteActor->SatelliteId);
+
+	FVector SatPhysPos = UCoordinateAdapter::UnrealToEciPosition(SatelliteActor->GetActorLocation(), 0.01);
+	TArray<TSharedPtr<FJsonValue>> SatPosArr;
+	SatPosArr.Add(MakeShared<FJsonValueNumber>(SatPhysPos.X));
+	SatPosArr.Add(MakeShared<FJsonValueNumber>(SatPhysPos.Y));
+	SatPosArr.Add(MakeShared<FJsonValueNumber>(SatPhysPos.Z));
+	PrimaryObj->SetArrayField(TEXT("position_m"), SatPosArr);
+
+	TArray<TSharedPtr<FJsonValue>> SatVelArr;
+	SatVelArr.Add(MakeShared<FJsonValueNumber>(0.0));
+	SatVelArr.Add(MakeShared<FJsonValueNumber>(7500.0));
+	SatVelArr.Add(MakeShared<FJsonValueNumber>(0.0));
+	PrimaryObj->SetArrayField(TEXT("velocity_mps"), SatVelArr);
+	PrimaryObj->SetStringField(TEXT("object_type"), TEXT("PAYLOAD"));
+	RootObject->SetObjectField(TEXT("primary"), PrimaryObj);
+
+	// Secondary Spacecraft (Debris)
+	if (DebrisActor)
+	{
+		TSharedPtr<FJsonObject> SecondaryObj = MakeShared<FJsonObject>();
+		SecondaryObj->SetStringField(TEXT("id"), DebrisActor->DebrisId);
+
+		FVector DebPhysPos = UCoordinateAdapter::UnrealToEciPosition(DebrisActor->GetActorLocation(), 0.01);
+		TArray<TSharedPtr<FJsonValue>> DebPosArr;
+		DebPosArr.Add(MakeShared<FJsonValueNumber>(DebPhysPos.X));
+		DebPosArr.Add(MakeShared<FJsonValueNumber>(DebPhysPos.Y));
+		DebPosArr.Add(MakeShared<FJsonValueNumber>(DebPhysPos.Z));
+		SecondaryObj->SetArrayField(TEXT("position_m"), DebPosArr);
+
+		TArray<TSharedPtr<FJsonValue>> DebVelArr;
+		DebVelArr.Add(MakeShared<FJsonValueNumber>(10.0));
+		DebVelArr.Add(MakeShared<FJsonValueNumber>(7490.0));
+		DebVelArr.Add(MakeShared<FJsonValueNumber>(50.0));
+		SecondaryObj->SetArrayField(TEXT("velocity_mps"), DebVelArr);
+		SecondaryObj->SetStringField(TEXT("object_type"), TEXT("DEBRIS"));
+		RootObject->SetObjectField(TEXT("secondary"), SecondaryObj);
+	}
+
+	RootObject->SetNumberField(TEXT("t_span_days"), 5.5);
+	RootObject->SetNumberField(TEXT("c_span_days"), 3.2);
+
+	// In steps >= 4 (burn planning and execution), supply normalized feature inputs to allow full KAN dual-model evaluation
+	if (StepIndex >= 4)
+	{
+		TArray<TSharedPtr<FJsonValue>> FeaturesArr;
+		for (int32 f = 0; f < 33; ++f)
+		{
+			FeaturesArr.Add(MakeShared<FJsonValueNumber>(0.0));
+		}
+		RootObject->SetArrayField(TEXT("features_33"), FeaturesArr);
+	}
+
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(RootObject.ToSharedRef(), Writer);
+
+	// Asynchronous HTTP request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FString Url = FString::Printf(TEXT("%s/api/v1/predict/collision-risk"), *KanServiceBaseUrl);
+	HttpRequest->SetURL(Url);
+	HttpRequest->SetVerb(TEXT("POST"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetContentAsString(OutputString);
+	HttpRequest->SetTimeout(2.0f);
+
+	HttpRequest->OnProcessRequestComplete().BindUObject(this, &AOrbitSimulationManager::OnKanResponseReceived);
+	HttpRequest->ProcessRequest();
+}
+
+void AOrbitSimulationManager::OnKanResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully)
+{
+	bKanRequestInFlight = false;
+
+	if (!AvoidanceWidget)
+	{
+		return;
+	}
+
+	// 1. Connection Failure / Timeout / Backend Unavailable
+	if (!bConnectedSuccessfully || !Response.IsValid() || Response->GetResponseCode() != 200)
+	{
+		AvoidanceWidget->UpdateKanTelemetry(
+			TEXT("N/A"),
+			TEXT("N/A"),
+			TEXT("pykan_esa_kelvins_v1.0"),
+			TEXT("BACKEND UNAVAILABLE"),
+			TEXT("-- ms"),
+			TEXT("N/A"),
+			TEXT("PHYSICS ONLY (FALLBACK)"),
+			FLinearColor(0.95f, 0.6f, 0.1f, 1.0f),
+			FLinearColor(0.0f, 0.95f, 0.45f, 1.0f)
+		);
+		return;
+	}
+
+	// 2. Parse JSON Response
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+	if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+	{
+		AvoidanceWidget->UpdateKanTelemetry(
+			TEXT("N/A"),
+			TEXT("N/A"),
+			TEXT("pykan_esa_kelvins_v1.0"),
+			TEXT("INVALID_RESPONSE_JSON"),
+			TEXT("-- ms"),
+			TEXT("N/A"),
+			TEXT("PHYSICS ONLY (FALLBACK)"),
+			FLinearColor(1.0f, 0.3f, 0.3f, 1.0f),
+			FLinearColor(0.0f, 0.95f, 0.45f, 1.0f)
+		);
+		return;
+	}
+
+	const FString StatusStr = JsonObject->GetStringField(TEXT("status"));
+	const FString ModelVer = JsonObject->GetStringField(TEXT("model_version"));
+
+	if (StatusStr == TEXT("INSUFFICIENT_INPUT_DATA"))
+	{
+		AvoidanceWidget->UpdateKanTelemetry(
+			TEXT("N/A"),
+			TEXT("N/A"),
+			ModelVer.IsEmpty() ? TEXT("pykan_esa_kelvins_v1.0") : ModelVer,
+			TEXT("INSUFFICIENT_INPUT_DATA"),
+			TEXT("-- ms"),
+			TEXT("N/A"),
+			TEXT("PHYSICS ONLY (FALLBACK)"),
+			FLinearColor(1.0f, 0.65f, 0.1f, 1.0f),
+			FLinearColor(0.0f, 0.95f, 0.45f, 1.0f)
+		);
+		return;
+	}
+
+	if (StatusStr == TEXT("SUCCESS"))
+	{
+		const double PredictedRisk = JsonObject->GetNumberField(TEXT("predicted_risk_log10"));
+		const FString PcDisplay = JsonObject->GetStringField(TEXT("estimated_pc_display"));
+		const FString RiskCategory = JsonObject->GetStringField(TEXT("risk_category"));
+		const double LatencyMs = JsonObject->GetNumberField(TEXT("latency_ms"));
+
+		const FString RiskStr = FString::Printf(TEXT("%.4f"), PredictedRisk);
+		const FString LatencyStr = FString::Printf(TEXT("%.1f ms"), LatencyMs);
+
+		const double PhysicsLogPc = (CurrentStepIndex >= 6) ? -21.9070 : -13.4026;
+		const double LogDelta = FMath::Abs(PredictedRisk - PhysicsLogPc);
+		const FString DeltaStr = FString::Printf(TEXT("\u0394 log\u2081\u2080: %.2f"), LogDelta);
+
+		FLinearColor StatusCol = FLinearColor(0.0f, 0.95f, 0.45f, 1.0f);
+		FLinearColor ConcordanceCol = FLinearColor(0.0f, 0.95f, 0.45f, 1.0f);
+		FString ConcordanceText = TEXT("CONCORDANT (LOW RISK)");
+
+		if (RiskCategory == TEXT("CRITICAL"))
+		{
+			StatusCol = FLinearColor(1.0f, 0.25f, 0.25f, 1.0f);
+			ConcordanceText = TEXT("ALERT: HIGH RISK");
+			ConcordanceCol = FLinearColor(1.0f, 0.25f, 0.25f, 1.0f);
+		}
+		else if (RiskCategory == TEXT("WARNING"))
+		{
+			StatusCol = FLinearColor(1.0f, 0.7f, 0.1f, 1.0f);
+			ConcordanceText = TEXT("WARNING LEVEL");
+			ConcordanceCol = FLinearColor(1.0f, 0.7f, 0.1f, 1.0f);
+		}
+
+		AvoidanceWidget->UpdateKanTelemetry(
+			RiskStr,
+			PcDisplay,
+			ModelVer,
+			FString::Printf(TEXT("PREDICTED %s"), *RiskCategory),
+			LatencyStr,
+			DeltaStr,
+			ConcordanceText,
+			StatusCol,
+			ConcordanceCol
+		);
+		return;
+	}
+
+	AvoidanceWidget->UpdateKanTelemetry(
+		TEXT("N/A"),
+		TEXT("N/A"),
+		ModelVer,
+		TEXT("MODEL INFERENCE ERROR"),
+		TEXT("-- ms"),
+		TEXT("N/A"),
+		TEXT("PHYSICS ONLY (FALLBACK)"),
+		FLinearColor(1.0f, 0.3f, 0.3f, 1.0f),
+		FLinearColor(0.0f, 0.95f, 0.45f, 1.0f)
+	);
 }

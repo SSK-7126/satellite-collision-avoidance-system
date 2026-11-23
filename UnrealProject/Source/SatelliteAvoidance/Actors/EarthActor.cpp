@@ -10,7 +10,9 @@ AEarthActor::AEarthActor()
 
 	EarthMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EarthMesh"));
 	RootComponent = EarthMesh;
-	EarthMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	EarthMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	EarthMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	EarthMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshFinder(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	if (SphereMeshFinder.Succeeded())
@@ -18,7 +20,7 @@ AEarthActor::AEarthActor()
 		EarthMesh->SetStaticMesh(SphereMeshFinder.Object);
 	}
 
-	EarthMesh->SetWorldScale3D(FVector(EarthRadiusUe / 50.0)); // Default UE sphere has radius 50 cm
+	EarthMesh->SetWorldScale3D(FVector(VisualEarthRadiusUe / 50.0)); // Default UE sphere has radius 50 cm
 
 	AtmosphereMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AtmosphereMesh"));
 	AtmosphereMesh->SetupAttachment(RootComponent);
@@ -41,7 +43,7 @@ void AEarthActor::OnConstruction(const FTransform& Transform)
 			UStaticMesh* SphereMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 			if (SphereMesh) { EarthMesh->SetStaticMesh(SphereMesh); }
 		}
-		EarthMesh->SetWorldScale3D(FVector(EarthRadiusUe / 50.0));
+		EarthMesh->SetWorldScale3D(FVector(VisualEarthRadiusUe / 50.0));
 	}
 
 	if (AtmosphereMesh)
@@ -60,6 +62,21 @@ void AEarthActor::OnConstruction(const FTransform& Transform)
 void AEarthActor::BeginPlay()
 {
 	Super::BeginPlay();
+#if WITH_EDITOR
+	SetIsSpatiallyLoaded(false);
+#endif
+
+	if (EarthMesh)
+	{
+		EarthMesh->SetWorldScale3D(FVector(VisualEarthRadiusUe / 50.0));
+	}
+	if (AtmosphereMesh)
+	{
+		AtmosphereMesh->SetRelativeScale3D(FVector(AtmosphereScaleMultiplier));
+		AtmosphereMesh->SetVisibility(true);
+		AtmosphereMesh->SetHiddenInGame(false);
+	}
+
 	ApplyEarthMaterials();
 }
 

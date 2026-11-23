@@ -24,4 +24,5 @@ UnrealProject/Build/
 
 # Standalone Windows packaging binary distribution & archives (>100MB)
 Project_Deliverables/Windows_Package/Packaged/
+Project_Deliverables/Windows_Package/SatelliteAvoidance_Windows_Shipping_x64/
 Project_Deliverables/Windows_Package/*.zip

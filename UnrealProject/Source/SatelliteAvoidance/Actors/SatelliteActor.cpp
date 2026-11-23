@@ -24,7 +24,9 @@ ASatelliteActor::ASatelliteActor()
 	// 1. Central Bus
 	SatelliteBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SatelliteBody"));
 	SatelliteBody->SetupAttachment(VisualRoot);
-	SatelliteBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SatelliteBody->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	SatelliteBody->SetCollisionResponseToAllChannels(ECR_Ignore);
+	SatelliteBody->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	if (CubeMeshFinder.Succeeded()) { SatelliteBody->SetStaticMesh(CubeMeshFinder.Object); }
 	SatelliteBody->SetRelativeScale3D(FVector(2.0, 2.0, 2.2));
 
@@ -177,6 +179,9 @@ void ASatelliteActor::OnConstruction(const FTransform& Transform)
 void ASatelliteActor::BeginPlay()
 {
 	Super::BeginPlay();
+#if WITH_EDITOR
+	SetIsSpatiallyLoaded(false);
+#endif
 
 	SetActorScale3D(FVector(1.0, 1.0, 1.0));
 	if (SceneRoot)
@@ -192,12 +197,6 @@ void ASatelliteActor::BeginPlay()
 			VisualRoot->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
 		}
 		VisualRoot->SetRelativeScale3D(FVector(VisualMeshScale, VisualMeshScale, VisualMeshScale));
-	}
-
-	if (SatelliteBody && VisualRoot && SatelliteBody->GetAttachParent() != VisualRoot)
-	{
-		SatelliteBody->AttachToComponent(VisualRoot, FAttachmentTransformRules::KeepRelativeTransform);
-		SatelliteBody->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
 	}
 
 	ApplySatelliteMaterials();

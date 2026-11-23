@@ -29,9 +29,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* VisualRoot;
 
-	// Independent visual scale factor for visual meshes (does not alter scientific position)
+	// Independent visual scale factor for visual meshes (prominently visible without altering scientific coordinates)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual Scaling")
-	float VisualMeshScale = 0.35f;
+	float VisualMeshScale = 22.0f;
 
 	// Central Bus (Golden metallic cuboid)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")

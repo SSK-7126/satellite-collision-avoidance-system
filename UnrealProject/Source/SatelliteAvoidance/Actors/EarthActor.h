@@ -19,9 +19,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* AtmosphereMesh;
 
-	/** Visual Earth radius in Unreal Units (default: 63,781.37 uu at scale 0.01). */
+	/** Scientific physical Earth radius in Unreal Units (default: 63,781.37 uu at scale 0.01). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")
 	double EarthRadiusUe = 63781.37;
+
+	/** Visual Earth radius for aesthetic mission-control framing (default: 12,000 uu).
+	 * Keeps Earth small, spherical and centered in deep background without dominating the viewport. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")
+	double VisualEarthRadiusUe = 12000.0;
 
 	/** Atmosphere radius multiplier relative to Earth (default: 1.015, ~95.7 km physical atmosphere). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Earth Properties")

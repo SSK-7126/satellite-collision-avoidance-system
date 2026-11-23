@@ -17,7 +17,8 @@ public class SatelliteAvoidance : ModuleRules
 			"JsonUtilities",
 			"UMG",
 			"Slate",
-			"SlateCore"
+			"SlateCore",
+			"HTTP"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
