@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "SCEN-CUSTOM-001",
+  "name": "Interactive Custom Scenario",
+  "description": "Dedicated workspace for user-created satellites and debris objects.",
+  "epoch_utc": "2026-11-23T13:04:14.580195+00:00",
+  "is_original_baseline": false,
+  "satellites": {},
+  "debris": {}
+}
